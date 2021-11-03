@@ -17,23 +17,14 @@
 package main
 
 import (
-	"context"
-	"encoding/hex"
 	"flag"
 	"fmt"
-	"math/big"
 	"os"
-	"strings"
-	"time"
 
-	"github.com/ethereum/go-ethereum"
-	"github.com/ethereum/go-ethereum/accounts/abi"
-	"github.com/ethereum/go-ethereum/contracts/native/go_abi/side_chain_manager_abi"
-	poly_utils "github.com/ethereum/go-ethereum/contracts/native/utils"
-	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/polynetwork/zion-setup/config"
 	"github.com/polynetwork/zion-setup/log"
 	"github.com/polynetwork/zion-setup/tools/eth"
+	"github.com/polynetwork/zion-setup/tools/zion"
 )
 
 var (
@@ -55,14 +46,15 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	poly := eth.NewEthTools(config.DefConfig.PolyJsonRpcURL)
+	z := zion.NewZionTools(config.DefConfig.ZionJsonRpcURL)
+	e := eth.NewEthTools(config.DefConfig.ETHConfig.ETHJsonRpcURL)
 
 	switch method {
 	case "register_side_chain":
-		signerArr := make([]*eth.EthSigner, 0)
+		signerArr := make([]*zion.ZionSigner, 0)
 		if len(config.DefConfig.NodeKeyList) != 0 {
 			for _, nodeKey := range config.DefConfig.NodeKeyList {
-				signer, err := eth.NewEthSigner(nodeKey)
+				signer, err := zion.NewZionSigner(nodeKey)
 				if err != nil {
 					panic(err)
 				}
@@ -72,120 +64,58 @@ func main() {
 
 		switch config.DefConfig.ChainName {
 		case "arbitrum", "optimism", "fantom":
-			if RegisterEthChain(1, poly, signerArr[0]) {
-				ApproveRegisterSideChain(poly, signerArr[1:])
+			if zion.RegisterSideChain("registerSideChain", 1, z, signerArr[0]) {
+				zion.ApproveRegisterSideChain("approveRegisterSideChain", z, signerArr[1:])
 			}
-		case "heco", "bsc", "eth":
-			if RegisterEthChain(12, poly, signerArr[0]) {
-				ApproveRegisterSideChain(poly, signerArr[1:])
+		case "eth", "heco", "bsc", "oec":
+			if zion.RegisterSideChain("registerSideChain", 12, z, signerArr[0]) {
+				zion.ApproveRegisterSideChain("approveRegisterSideChain", z, signerArr[1:])
 			}
 		default:
 			panic(fmt.Errorf("not supported chain name"))
 		}
+	case "update_side_chain":
+		signerArr := make([]*zion.ZionSigner, 0)
+		if len(config.DefConfig.NodeKeyList) != 0 {
+			for _, nodeKey := range config.DefConfig.NodeKeyList {
+				signer, err := zion.NewZionSigner(nodeKey)
+				if err != nil {
+					panic(err)
+				}
+				signerArr = append(signerArr, signer)
+			}
+		}
+
+		switch config.DefConfig.ChainName {
+		case "arbitrum", "optimism", "fantom":
+			if zion.RegisterSideChain("updateSideChain", 1, z, signerArr[0]) {
+				zion.ApproveRegisterSideChain("approveUpdateSideChain", z, signerArr[1:])
+			}
+		case "eth", "heco", "bsc", "oec":
+			if zion.RegisterSideChain("updateSideChain", 12, z, signerArr[0]) {
+				zion.ApproveRegisterSideChain("approveUpdateSideChain", z, signerArr[1:])
+			}
+		default:
+			panic(fmt.Errorf("not supported chain name"))
+		}
+	case "sync_genesis_header":
+		signerArr := make([]*zion.ZionSigner, 0)
+		if len(config.DefConfig.NodeKeyList) != 0 {
+			for _, nodeKey := range config.DefConfig.NodeKeyList {
+				signer, err := zion.NewZionSigner(nodeKey)
+				if err != nil {
+					panic(err)
+				}
+				signerArr = append(signerArr, signer)
+			}
+		}
+
+		switch config.DefConfig.ChainName {
+		case "eth", "heco", "bsc", "oec":
+			eth.SyncETHToZion(z, e, signerArr)
+			eth.SyncZionToETH(z, e)
+		}
 	default:
 		panic(fmt.Errorf("not supported method"))
-	}
-}
-
-func RegisterEthChain(blkToWait uint64, poly *eth.ETHTools, signer *eth.EthSigner) bool {
-	eccd, err := hex.DecodeString(strings.Replace(config.DefConfig.Eccd, "0x", "", 1))
-	if err != nil {
-		panic(fmt.Errorf("RegisterEthChain, failed to decode eccd '%s' : %v", config.DefConfig.Eccd, err))
-	}
-	scmAbi, err := abi.JSON(strings.NewReader(side_chain_manager_abi.SideChainManagerABI))
-	if err != nil {
-		panic(fmt.Errorf("RegisterEthChain, abi.JSON error:" + err.Error()))
-	}
-	gasPrice, err := poly.GetEthClient().SuggestGasPrice(context.Background())
-	if err != nil {
-		panic(fmt.Errorf("RegisterEthChain, get suggest gas price failed error: %s", err.Error()))
-	}
-	gasPrice = gasPrice.Mul(gasPrice, big.NewInt(1))
-
-	txData, err := scmAbi.Pack("registerSideChain", signer.Address, config.DefConfig.ChainId, uint64(0),
-		config.DefConfig.ChainName, blkToWait, eccd, []byte{})
-	if err != nil {
-		panic(fmt.Errorf("RegisterEthChain, scmAbi.Pack error:" + err.Error()))
-	}
-
-	callMsg := ethereum.CallMsg{
-		From: signer.Address, To: &poly_utils.SideChainManagerContractAddress, Gas: 0, GasPrice: gasPrice,
-		Value: big.NewInt(int64(0)), Data: txData,
-	}
-	gasLimit, err := poly.GetEthClient().EstimateGas(context.Background(), callMsg)
-	if err != nil {
-		panic(fmt.Errorf("RegisterEthChain, estimate gas limit error: %s", err.Error()))
-	}
-	nonce := eth.NewNonceManager(poly.GetEthClient()).GetAddressNonce(signer.Address)
-	tx := types.NewTx(&types.LegacyTx{Nonce: nonce, GasPrice: gasPrice, Gas: gasLimit, To: &poly_utils.SideChainManagerContractAddress, Value: big.NewInt(0), Data: txData})
-	chainID, err := poly.GetChainID()
-	if err != nil {
-		panic(fmt.Errorf("RegisterEthChain, get chain id error: %s", err.Error()))
-	}
-	signedtx, err := types.SignTx(tx, types.NewEIP155Signer(chainID), signer.PrivateKey)
-	if err != nil {
-		panic(fmt.Errorf("SignTransaction failed:%v", err))
-	}
-	duration := time.Second * 20
-	timerCtx, cancelFunc := context.WithTimeout(context.Background(), duration)
-	defer cancelFunc()
-	err = poly.GetEthClient().SendTransaction(timerCtx, signedtx)
-	if err != nil {
-		panic(fmt.Errorf("SendTransaction failed:%v", err))
-	}
-	txhash := signedtx.Hash()
-
-	isSuccess := poly.WaitTransactionConfirm(txhash)
-	if isSuccess {
-		log.Infof("successful RegisterVoteChain to poly: (poly_hash: %s, account: %s)", txhash.String(), signer.Address.Hex())
-	} else {
-		log.Errorf("failed to RegisterVoteChain to poly: (poly_hash: %s, account: %s)", txhash.String(), signer.Address.Hex())
-	}
-	return true
-}
-
-func ApproveRegisterSideChain(poly *eth.ETHTools, signerArr []*eth.EthSigner) {
-	scmAbi, err := abi.JSON(strings.NewReader(side_chain_manager_abi.SideChainManagerABI))
-	if err != nil {
-		panic(fmt.Errorf("ApproveRegisterSideChain, abi.JSON error:" + err.Error()))
-	}
-	gasPrice, err := poly.GetEthClient().SuggestGasPrice(context.Background())
-	if err != nil {
-		panic(fmt.Errorf("ApproveRegisterSideChain, get suggest gas price failed error: %s", err.Error()))
-	}
-	gasPrice = gasPrice.Mul(gasPrice, big.NewInt(1))
-	duration := time.Second * 20
-	timerCtx, cancelFunc := context.WithTimeout(context.Background(), duration)
-	defer cancelFunc()
-	for i, signer := range signerArr {
-		txData, err := scmAbi.Pack("approveRegisterSideChain", config.DefConfig.ChainId, signer.Address)
-		if err != nil {
-			panic(fmt.Errorf("ApproveRegisterSideChain, scmAbi.Pack error:" + err.Error()))
-		}
-
-		callMsg := ethereum.CallMsg{
-			From: signer.Address, To: &poly_utils.SideChainManagerContractAddress, Gas: 0, GasPrice: gasPrice,
-			Value: big.NewInt(int64(0)), Data: txData,
-		}
-		gasLimit, err := poly.GetEthClient().EstimateGas(context.Background(), callMsg)
-		if err != nil {
-			panic(fmt.Errorf("ApproveRegisterSideChain, estimate gas limit error: %s", err.Error()))
-		}
-		nonce := eth.NewNonceManager(poly.GetEthClient()).GetAddressNonce(signer.Address)
-		tx := types.NewTx(&types.LegacyTx{Nonce: nonce, GasPrice: gasPrice, Gas: gasLimit, To: &poly_utils.SideChainManagerContractAddress, Value: big.NewInt(0), Data: txData})
-		chainID, err := poly.GetChainID()
-		if err != nil {
-			panic(fmt.Errorf("RegisterEthChain, get chain id error: %s", err.Error()))
-		}
-		signedtx, err := types.SignTx(tx, types.NewEIP155Signer(chainID), signer.PrivateKey)
-		if err != nil {
-			panic(fmt.Errorf("SignTransaction failed:%v", err))
-		}
-		err = poly.GetEthClient().SendTransaction(timerCtx, signedtx)
-		if err != nil {
-			panic(fmt.Errorf("SendTransaction failed:%v", err))
-		}
-		txhash := signedtx.Hash()
-		log.Infof("No%d: successful to approve: ( acc: %s, txhash: %s, chain-id: %d )", i, signer.Address.Hex(), txhash.String(), config.DefConfig.ChainId)
 	}
 }

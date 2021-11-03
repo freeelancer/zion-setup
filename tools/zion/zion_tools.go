@@ -14,7 +14,7 @@
 * You should have received a copy of the GNU Lesser General Public License
 * along with The poly network . If not, see <http://www.gnu.org/licenses/>.
  */
-package eth
+package zion
 
 import (
 	"bytes"
@@ -22,7 +22,11 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
-	"github.com/ethereum/go-ethereum/contracts/native/header_sync/eth"
+	"github.com/ethereum/go-ethereum"
+	"github.com/ethereum/go-ethereum/contracts/native/governance/node_manager"
+	"github.com/ethereum/go-ethereum/contracts/native/utils"
+	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/rlp"
 	"io/ioutil"
 	"math/big"
 	"net/http"
@@ -36,7 +40,7 @@ import (
 	"github.com/polynetwork/zion-setup/log"
 )
 
-type ETHTools struct {
+type ZionTools struct {
 	restclient *RestClient
 	ethclient  *ethclient.Client
 }
@@ -69,32 +73,99 @@ type BlockReq struct {
 }
 
 type BlockRep struct {
-	JsonRPC string      `json:"jsonrpc"`
-	Result  *eth.Header `json:"result"`
-	Error   *jsonError  `json:"error,omitempty"`
-	Id      uint        `json:"id"`
+	JsonRPC string        `json:"jsonrpc"`
+	Result  *types.Header `json:"result"`
+	Error   *jsonError    `json:"error,omitempty"`
+	Id      uint          `json:"id"`
 }
 
-func NewEthTools(url string) *ETHTools {
+type proofReq struct {
+	JsonRPC string        `json:"jsonrpc"`
+	Method  string        `json:"method"`
+	Params  []interface{} `json:"params"`
+	Id      uint          `json:"id"`
+}
+
+type proofRsp struct {
+	JsonRPC string     `json:"jsonrpc"`
+	Result  ETHProof   `json:"result,omitempty"`
+	Error   *jsonError `json:"error,omitempty"`
+	Id      uint       `json:"id"`
+}
+
+type ETHProof struct {
+	Address       string         `json:"address"`
+	Balance       string         `json:"balance"`
+	CodeHash      string         `json:"codeHash"`
+	Nonce         string         `json:"nonce"`
+	StorageHash   string         `json:"storageHash"`
+	AccountProof  []string       `json:"accountProof"`
+	StorageProofs []StorageProof `json:"storageProof"`
+}
+
+type StorageProof struct {
+	Key   string   `json:"key"`
+	Value string   `json:"value"`
+	Proof []string `json:"proof"`
+}
+
+func NewZionTools(url string) *ZionTools {
 	ethclient, err := ethclient.Dial(url)
 	if err != nil {
-		log.Error("NewEthTools: cannot dial sync node, err: %s", err)
+		log.Error("NewZionTools: cannot dial sync node, err: %s", err)
 		return nil
 	}
 	restclient := NewRestClient()
 	restclient.SetAddr(url)
-	tool := &ETHTools{
+	tool := &ZionTools{
 		restclient: restclient,
 		ethclient:  ethclient,
 	}
 	return tool
 }
 
-func (self *ETHTools) GetEthClient() *ethclient.Client {
+func (self *ZionTools) GetEthClient() *ethclient.Client {
 	return self.ethclient
 }
 
-func (self *ETHTools) GetNodeHeight() (uint64, error) {
+func (self *ZionTools) GetRawHeaderAndRawSeals(height uint64) (rawHeader, rawSeals []byte, err error) {
+	header, err := self.GetBlockHeader(height)
+	if err != nil {
+		return
+	}
+	rawHeader, err = rlp.EncodeToBytes(types.HotstuffFilteredHeader(header, false))
+	extra, err := types.ExtractHotstuffExtra(header)
+	if err != nil {
+		return
+	}
+	rawSeals, err = rlp.EncodeToBytes(extra.CommittedSeal)
+	return
+}
+
+func (self *ZionTools) GetEpochInfo() (epochInfo *node_manager.EpochInfo, err error) {
+	node_manager.InitABI()
+	payload, err := new(node_manager.MethodEpochInput).Encode()
+	if err != nil {
+		return
+	}
+	arg := ethereum.CallMsg{
+		From: common.Address{},
+		To:   &utils.NodeManagerContractAddress,
+		Data: payload,
+	}
+	res, err := self.GetEthClient().CallContract(context.Background(), arg, nil)
+	if err != nil {
+		return
+	}
+	output := new(node_manager.MethodEpochOutput)
+	if err = output.Decode(res); err != nil {
+		return
+	}
+	epochInfo = output.Epoch
+	return
+}
+
+func (self *ZionTools) GetNodeHeight() (uint64, error) {
 	req := &heightReq{
 		JsonRpc: "2.0",
 		Method:  "eth_blockNumber",
@@ -125,7 +196,7 @@ func (self *ETHTools) GetNodeHeight() (uint64, error) {
 	}
 }
 
-func (self *ETHTools) GetBlockHeader(height uint64) (*eth.Header, error) {
+func (self *ZionTools) GetBlockHeader(height uint64) (*types.Header, error) {
 	params := []interface{}{fmt.Sprintf("0x%x", height), true}
 	req := &BlockReq{
 		JsonRpc: "2.0",
@@ -153,11 +224,67 @@ func (self *ETHTools) GetBlockHeader(height uint64) (*eth.Header, error) {
 	return rsp.Result, nil
 }
 
-func (self *ETHTools) GetChainID() (*big.Int, error) {
+func (self *ZionTools) GetChainID() (*big.Int, error) {
 	return self.ethclient.ChainID(context.Background())
 }
 
-func (self *ETHTools) WaitTransactionConfirm(hash common.Hash) bool {
+func (self *ZionTools) GetRawProof(address, key string, height uint64) (accountProof, storageProof []byte, err error) {
+	height_hex := "0x" + strconv.FormatUint(height, 16)
+	raw, err := self.GetProof(
+		address,
+		key,
+		height_hex)
+	if err != nil {
+		return
+	}
+	res := &ETHProof{}
+	err = json.Unmarshal(raw, res)
+	if err != nil {
+		return
+	}
+	accountProof, err = rlpEncodeStringList(res.AccountProof)
+	if err != nil {
+		return
+	}
+	storageProof, err = rlpEncodeStringList(res.StorageProofs[0].Proof)
+	if err != nil {
+		return
+	}
+	return
+}
+
+func (self *ZionTools) GetProof(contractAddress string, key string, blockheight string) ([]byte, error) {
+	req := &proofReq{
+		JsonRPC: "2.0",
+		Method:  "eth_getProof",
+		Params:  []interface{}{contractAddress, []string{key}, blockheight},
+		Id:      1,
+	}
+	reqdata, err := json.Marshal(req)
+	if err != nil {
+		return nil, fmt.Errorf("get_ethproof: marshal req err: %s", err)
+	}
+	rspdata, err := self.restclient.SendRestRequest(reqdata)
+	if err != nil {
+		return nil, fmt.Errorf("GetProof: send request err: %s", err)
+	}
+	rsp := &proofRsp{}
+	err = json.Unmarshal(rspdata, rsp)
+	if err != nil {
+		return nil, fmt.Errorf("GetProof, unmarshal resp err: %s", err)
+	}
+	if rsp.Error != nil {
+		return nil, fmt.Errorf("GetProof, unmarshal resp err: %s", rsp.Error.Message)
+	}
+	result, err := json.Marshal(rsp.Result)
+	if err != nil {
+		return nil, fmt.Errorf("GetProof, Marshal result err: %s", err)
+	}
+	//fmt.Printf("proof res is:%s\n", string(result))
+	return result, nil
+}
+
+func (self *ZionTools) WaitTransactionConfirm(hash common.Hash) bool {
 	start := time.Now()
 	for {
 		if time.Now().After(start.Add(time.Minute * 1)) {
@@ -179,6 +306,46 @@ func (self *ETHTools) WaitTransactionConfirm(hash common.Hash) bool {
 			return receipt.Status == types.ReceiptStatusSuccessful
 		}
 	}
+}
+
+func GetEpochKey(epochID uint64) common.Hash {
+	key := epochProofKey(EpochProofHash(epochID))
+	return crypto.Keccak256Hash(key[common.AddressLength:])
+}
+
+var SKP_PROOF = "st_proof"
+var EpochProofDigest = common.HexToHash("e4bf3526f07c80af3a5de1411dd34471c71bdd5d04eedbfa1040da2c96802041")
+
+func epochProofKey(proofHashKey common.Hash) []byte {
+	return utils.ConcatKey(utils.NodeManagerContractAddress, []byte(SKP_PROOF), proofHashKey.Bytes())
+}
+
+func EpochProofHash(epochID uint64) common.Hash {
+	enc := EpochProofDigest.Bytes()
+	enc = append(enc, utils.GetUint64Bytes(epochID)...)
+	return crypto.Keccak256Hash(enc)
+}
+
+func GetRawEpochInfo(id, startHeight uint64, peers *node_manager.Peers) (rawEpochInfo []byte, err error) {
+	var inf = struct {
+		ID          uint64
+		Peers       *node_manager.Peers
+		StartHeight uint64
+	}{
+		ID:          id,
+		Peers:       peers,
+		StartHeight: startHeight,
+	}
+	return rlp.EncodeToBytes(inf)
+}
+
+func rlpEncodeStringList(raw []string) ([]byte, error) {
+	var rawBytes []byte
+	for i := 0; i < len(raw); i++ {
+		rawBytes = append(rawBytes, common.Hex2Bytes(raw[i][2:])...)
+		// rawBytes = append(rawBytes, common.Hex2Bytes(raw[i][2:]))
+	}
+	return rlp.EncodeToBytes(rawBytes)
 }
 
 type RestClient struct {

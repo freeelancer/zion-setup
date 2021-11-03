@@ -27,12 +27,19 @@ import (
 
 // Config config object
 type Config struct {
-	PolyJsonRpcURL string
+	ZionJsonRpcURL string
 	NodeKeyList    []string
+	ChainName      string
+	ETHConfig      *ETHConfig
+}
 
-	ChainId   uint64
-	ChainName string
-	Eccd      string
+type ETHConfig struct {
+	ChainId       uint64
+	Router        uint64
+	Eccd          string
+	Eccm          string
+	ETHJsonRpcURL string
+	ETHPrivateKey string
 }
 
 // DefConfig Default config instance
