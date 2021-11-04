@@ -14,10 +14,11 @@
 * You should have received a copy of the GNU Lesser General Public License
 * along with The poly network . If not, see <http://www.gnu.org/licenses/>.
  */
-package eth
+package method
 
 import (
 	"context"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"math/big"
@@ -29,19 +30,149 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/contracts/native/go_abi/header_sync_abi"
+	"github.com/ethereum/go-ethereum/contracts/native/go_abi/side_chain_manager_abi"
 	"github.com/ethereum/go-ethereum/contracts/native/header_sync/bsc"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/polynetwork/zion-setup/config"
 	"github.com/polynetwork/zion-setup/log"
+	"github.com/polynetwork/zion-setup/tools/eth"
 	"github.com/polynetwork/zion-setup/tools/zion"
 )
 
-func SyncETHToZion(z *zion.ZionTools, e *ETHTools, signerArr []*zion.ZionSigner, chainName string) {
+func RegisterSideChain(method string, chainName string, z *zion.ZionTools, e *eth.ETHTools, signer *zion.ZionSigner) bool {
+	var blkToWait uint64
+	var extra []byte
+	switch chainName {
+	case "eth":
+		blkToWait = 12
+	case "bsc":
+		blkToWait = 15
+		chainId, err := e.GetChainID()
+		if err != nil {
+			panic(err)
+		}
+		ex := bsc.ExtraInfo{
+			ChainID: chainId,
+		}
+		extra, _ = json.Marshal(ex)
+	default:
+		panic(fmt.Errorf("not supported chain name"))
+	}
+
+	eccd, err := hex.DecodeString(strings.Replace(config.DefConfig.ETHConfig.Eccd, "0x", "", 1))
+	if err != nil {
+		panic(fmt.Errorf("RegisterEthChain, failed to decode eccd '%s' : %v", config.DefConfig.ETHConfig.Eccd, err))
+	}
+	scmAbi, err := abi.JSON(strings.NewReader(side_chain_manager_abi.SideChainManagerABI))
+	if err != nil {
+		panic(fmt.Errorf("RegisterEthChain, abi.JSON error:" + err.Error()))
+	}
+	gasPrice, err := z.GetEthClient().SuggestGasPrice(context.Background())
+	if err != nil {
+		panic(fmt.Errorf("RegisterEthChain, get suggest gas price failed error: %s", err.Error()))
+	}
+	gasPrice = gasPrice.Mul(gasPrice, big.NewInt(1))
+
+	txData, err := scmAbi.Pack(method, signer.Address, config.DefConfig.ETHConfig.ChainId, config.DefConfig.ETHConfig.Router,
+		config.DefConfig.ChainName, blkToWait, eccd, extra)
+	if err != nil {
+		panic(fmt.Errorf("RegisterEthChain, scmAbi.Pack error:" + err.Error()))
+	}
+
+	callMsg := ethereum.CallMsg{
+		From: signer.Address, To: &utils.SideChainManagerContractAddress, Gas: 0, GasPrice: gasPrice,
+		Value: big.NewInt(int64(0)), Data: txData,
+	}
+	gasLimit, err := z.GetEthClient().EstimateGas(context.Background(), callMsg)
+	if err != nil {
+		panic(fmt.Errorf("RegisterEthChain, estimate gas limit error: %s", err.Error()))
+	}
+	nonce := zion.NewNonceManager(z.GetEthClient()).GetAddressNonce(signer.Address)
+	tx := types.NewTx(&types.LegacyTx{Nonce: nonce, GasPrice: gasPrice, Gas: gasLimit, To: &utils.SideChainManagerContractAddress, Value: big.NewInt(0), Data: txData})
+	chainID, err := z.GetChainID()
+	if err != nil {
+		panic(fmt.Errorf("RegisterEthChain, get chain id error: %s", err.Error()))
+	}
+	signedtx, err := types.SignTx(tx, types.NewEIP155Signer(chainID), signer.PrivateKey)
+	if err != nil {
+		panic(fmt.Errorf("SignTransaction failed:%v", err))
+	}
+	duration := time.Second * 20
+	timerCtx, cancelFunc := context.WithTimeout(context.Background(), duration)
+	defer cancelFunc()
+	err = z.GetEthClient().SendTransaction(timerCtx, signedtx)
+	if err != nil {
+		panic(fmt.Errorf("SendTransaction failed:%v", err))
+	}
+	txhash := signedtx.Hash()
+
+	isSuccess := z.WaitTransactionConfirm(txhash)
+	if isSuccess {
+		log.Infof("successful RegisterSideChain to zion: (poly_hash: %s, account: %s)", txhash.String(), signer.Address.Hex())
+	} else {
+		log.Errorf("failed to RegisterSideChain to zion: (poly_hash: %s, account: %s)", txhash.String(), signer.Address.Hex())
+	}
+	return true
+}
+
+func ApproveRegisterSideChain(method string, z *zion.ZionTools, signerArr []*zion.ZionSigner) {
+	scmAbi, err := abi.JSON(strings.NewReader(side_chain_manager_abi.SideChainManagerABI))
+	if err != nil {
+		panic(fmt.Errorf("ApproveRegisterSideChain, abi.JSON error:" + err.Error()))
+	}
+	gasPrice, err := z.GetEthClient().SuggestGasPrice(context.Background())
+	if err != nil {
+		panic(fmt.Errorf("ApproveRegisterSideChain, get suggest gas price failed error: %s", err.Error()))
+	}
+	gasPrice = gasPrice.Mul(gasPrice, big.NewInt(1))
+	duration := time.Second * 20
+	timerCtx, cancelFunc := context.WithTimeout(context.Background(), duration)
+	defer cancelFunc()
+	for _, signer := range signerArr {
+		txData, err := scmAbi.Pack(method, config.DefConfig.ETHConfig.ChainId, signer.Address)
+		if err != nil {
+			panic(fmt.Errorf("ApproveRegisterSideChain, scmAbi.Pack error:" + err.Error()))
+		}
+
+		callMsg := ethereum.CallMsg{
+			From: signer.Address, To: &utils.SideChainManagerContractAddress, Gas: 0, GasPrice: gasPrice,
+			Value: big.NewInt(int64(0)), Data: txData,
+		}
+		gasLimit, err := z.GetEthClient().EstimateGas(context.Background(), callMsg)
+		if err != nil {
+			panic(fmt.Errorf("ApproveRegisterSideChain, estimate gas limit error: %s", err.Error()))
+		}
+		nonce := zion.NewNonceManager(z.GetEthClient()).GetAddressNonce(signer.Address)
+		tx := types.NewTx(&types.LegacyTx{Nonce: nonce, GasPrice: gasPrice, Gas: gasLimit, To: &utils.SideChainManagerContractAddress, Value: big.NewInt(0), Data: txData})
+		chainID, err := z.GetChainID()
+		if err != nil {
+			panic(fmt.Errorf("RegisterEthChain, get chain id error: %s", err.Error()))
+		}
+		signedtx, err := types.SignTx(tx, types.NewEIP155Signer(chainID), signer.PrivateKey)
+		if err != nil {
+			panic(fmt.Errorf("SignTransaction failed:%v", err))
+		}
+		err = z.GetEthClient().SendTransaction(timerCtx, signedtx)
+		if err != nil {
+			panic(fmt.Errorf("SendTransaction failed:%v", err))
+		}
+		txhash := signedtx.Hash()
+		isSuccess := z.WaitTransactionConfirm(txhash)
+		if isSuccess {
+			log.Infof("successful ApproveRegisterSideChain to zion: (poly_hash: %s, account: %s)", txhash.String(), signer.Address.Hex())
+		} else {
+			log.Errorf("failed to ApproveRegisterSideChain to zion: (poly_hash: %s, account: %s)", txhash.String(), signer.Address.Hex())
+		}
+	}
+}
+
+func SyncETHToZion(z *zion.ZionTools, e *eth.ETHTools, signerArr []*zion.ZionSigner, chainName string) {
 	curr, err := e.GetNodeHeight()
 	if err != nil {
 		panic(err)
 	}
+	log.Infof("current height of eth is %d", curr)
 	var raw []byte
 	switch chainName {
 	case "eth":
@@ -84,6 +215,8 @@ func SyncETHToZion(z *zion.ZionTools, e *ETHTools, signerArr []*zion.ZionSigner,
 		if err != nil {
 			panic(err)
 		}
+	default:
+		panic(fmt.Errorf("not supported chain name"))
 	}
 
 	scmAbi, err := abi.JSON(strings.NewReader(header_sync_abi.HeaderSyncABI))
@@ -109,7 +242,7 @@ func SyncETHToZion(z *zion.ZionTools, e *ETHTools, signerArr []*zion.ZionSigner,
 		if err != nil {
 			panic(fmt.Errorf("SyncETHToZion, estimate gas limit error: %s", err.Error()))
 		}
-		nonce := NewNonceManager(z.GetEthClient()).GetAddressNonce(signer.Address)
+		nonce := zion.NewNonceManager(z.GetEthClient()).GetAddressNonce(signer.Address)
 		tx := types.NewTx(&types.LegacyTx{Nonce: nonce, GasPrice: gasPrice, Gas: gasLimit, To: &utils.HeaderSyncContractAddress, Value: big.NewInt(0), Data: txData})
 		chainID, err := z.GetChainID()
 		if err != nil {
@@ -136,8 +269,8 @@ func SyncETHToZion(z *zion.ZionTools, e *ETHTools, signerArr []*zion.ZionSigner,
 	}
 }
 
-func SyncZionToETH(z *zion.ZionTools, e *ETHTools) {
-	signer, err := NewEthSigner(config.DefConfig.ETHConfig.ETHPrivateKey)
+func SyncZionToETH(z *zion.ZionTools, e *eth.ETHTools) {
+	signer, err := eth.NewEthSigner(config.DefConfig.ETHConfig.ETHPrivateKey)
 	if err != nil {
 		panic(err)
 	}
@@ -189,7 +322,7 @@ func SyncZionToETH(z *zion.ZionTools, e *ETHTools) {
 		log.Errorf("SyncZionToETH, estimate gas limit error: %s", err.Error())
 		return
 	}
-	nonce := NewNonceManager(e.GetEthClient()).GetAddressNonce(signer.Address)
+	nonce := eth.NewNonceManager(e.GetEthClient()).GetAddressNonce(signer.Address)
 	tx := types.NewTx(&types.LegacyTx{Nonce: nonce, GasPrice: gasPrice, Gas: gasLimit, To: &eccm, Value: big.NewInt(0), Data: txData})
 	chainID, err := e.GetChainID()
 	if err != nil {

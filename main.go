@@ -24,16 +24,17 @@ import (
 	"github.com/polynetwork/zion-setup/config"
 	"github.com/polynetwork/zion-setup/log"
 	"github.com/polynetwork/zion-setup/tools/eth"
+	"github.com/polynetwork/zion-setup/tools/method"
 	"github.com/polynetwork/zion-setup/tools/zion"
 )
 
 var (
-	method string
-	conf   string
+	cmd  string
+	conf string
 )
 
 func init() {
-	flag.StringVar(&method, "method", "", "choose a method to run")
+	flag.StringVar(&cmd, "cmd", "", "choose a method to run")
 	flag.StringVar(&conf, "conf", "./config.json", "configuration file path")
 
 	flag.Parse()
@@ -49,7 +50,7 @@ func main() {
 	z := zion.NewZionTools(config.DefConfig.ZionJsonRpcURL)
 	e := eth.NewEthTools(config.DefConfig.ETHConfig.ETHJsonRpcURL)
 
-	switch method {
+	switch cmd {
 	case "register_side_chain":
 		signerArr := make([]*zion.ZionSigner, 0)
 		if len(config.DefConfig.NodeKeyList) != 0 {
@@ -63,13 +64,9 @@ func main() {
 		}
 
 		switch config.DefConfig.ChainName {
-		case "arbitrum", "optimism", "fantom":
-			if zion.RegisterSideChain("registerSideChain", 1, z, signerArr[0]) {
-				zion.ApproveRegisterSideChain("approveRegisterSideChain", z, signerArr[1:6])
-			}
-		case "eth", "heco", "bsc", "oec":
-			if zion.RegisterSideChain("registerSideChain", 12, z, signerArr[0]) {
-				zion.ApproveRegisterSideChain("approveRegisterSideChain", z, signerArr[1:6])
+		case "eth", "bsc", "heco", "oec", " arbitrum", "optimism", "fantom":
+			if method.RegisterSideChain("registerSideChain", config.DefConfig.ChainName, z, e, signerArr[0]) {
+				method.ApproveRegisterSideChain("approveRegisterSideChain", z, signerArr[1:6])
 			}
 		default:
 			panic(fmt.Errorf("not supported chain name"))
@@ -87,13 +84,9 @@ func main() {
 		}
 
 		switch config.DefConfig.ChainName {
-		case "arbitrum", "optimism", "fantom":
-			if zion.RegisterSideChain("updateSideChain", 1, z, signerArr[0]) {
-				zion.ApproveRegisterSideChain("approveUpdateSideChain", z, signerArr[1:6])
-			}
-		case "eth", "heco", "bsc", "oec":
-			if zion.RegisterSideChain("updateSideChain", 12, z, signerArr[0]) {
-				zion.ApproveRegisterSideChain("approveUpdateSideChain", z, signerArr[1:6])
+		case "eth", "heco", "bsc", "oec", "arbitrum", "optimism", "fantom":
+			if method.RegisterSideChain("updateSideChain", config.DefConfig.ChainName, z, e, signerArr[0]) {
+				method.ApproveRegisterSideChain("approveUpdateSideChain", z, signerArr[1:6])
 			}
 		default:
 			panic(fmt.Errorf("not supported chain name"))
@@ -112,8 +105,8 @@ func main() {
 
 		switch config.DefConfig.ChainName {
 		case "eth", "heco", "bsc", "oec":
-			eth.SyncETHToZion(z, e, signerArr[0:5], config.DefConfig.ChainName)
-			eth.SyncZionToETH(z, e)
+			method.SyncETHToZion(z, e, signerArr[0:5], config.DefConfig.ChainName)
+			//method.SyncZionToETH(z, e)
 		}
 	default:
 		panic(fmt.Errorf("not supported method"))
