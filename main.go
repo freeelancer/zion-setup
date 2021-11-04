@@ -65,11 +65,11 @@ func main() {
 		switch config.DefConfig.ChainName {
 		case "arbitrum", "optimism", "fantom":
 			if zion.RegisterSideChain("registerSideChain", 1, z, signerArr[0]) {
-				zion.ApproveRegisterSideChain("approveRegisterSideChain", z, signerArr[1:])
+				zion.ApproveRegisterSideChain("approveRegisterSideChain", z, signerArr[1:6])
 			}
 		case "eth", "heco", "bsc", "oec":
 			if zion.RegisterSideChain("registerSideChain", 12, z, signerArr[0]) {
-				zion.ApproveRegisterSideChain("approveRegisterSideChain", z, signerArr[1:])
+				zion.ApproveRegisterSideChain("approveRegisterSideChain", z, signerArr[1:6])
 			}
 		default:
 			panic(fmt.Errorf("not supported chain name"))
@@ -89,11 +89,11 @@ func main() {
 		switch config.DefConfig.ChainName {
 		case "arbitrum", "optimism", "fantom":
 			if zion.RegisterSideChain("updateSideChain", 1, z, signerArr[0]) {
-				zion.ApproveRegisterSideChain("approveUpdateSideChain", z, signerArr[1:])
+				zion.ApproveRegisterSideChain("approveUpdateSideChain", z, signerArr[1:6])
 			}
 		case "eth", "heco", "bsc", "oec":
 			if zion.RegisterSideChain("updateSideChain", 12, z, signerArr[0]) {
-				zion.ApproveRegisterSideChain("approveUpdateSideChain", z, signerArr[1:])
+				zion.ApproveRegisterSideChain("approveUpdateSideChain", z, signerArr[1:6])
 			}
 		default:
 			panic(fmt.Errorf("not supported chain name"))
@@ -112,7 +112,7 @@ func main() {
 
 		switch config.DefConfig.ChainName {
 		case "eth", "heco", "bsc", "oec":
-			eth.SyncETHToZion(z, e, signerArr)
+			eth.SyncETHToZion(z, e, signerArr[0:5], config.DefConfig.ChainName)
 			eth.SyncZionToETH(z, e)
 		}
 	default:

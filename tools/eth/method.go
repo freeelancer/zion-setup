@@ -18,35 +18,72 @@ package eth
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
-	"github.com/KSlashh/poly-abi/abi_1.9.25/ccm"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/polynetwork/zion-setup/tools/zion"
 	"math/big"
 	"strings"
 	"time"
 
+	"github.com/KSlashh/poly-abi/abi_1.9.25/ccm"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/contracts/native/go_abi/header_sync_abi"
+	"github.com/ethereum/go-ethereum/contracts/native/header_sync/bsc"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/polynetwork/zion-setup/config"
 	"github.com/polynetwork/zion-setup/log"
+	"github.com/polynetwork/zion-setup/tools/zion"
 )
 
-func SyncETHToZion(z *zion.ZionTools, e *ETHTools, signerArr []*zion.ZionSigner) {
+func SyncETHToZion(z *zion.ZionTools, e *ETHTools, signerArr []*zion.ZionSigner, chainName string) {
 	curr, err := e.GetNodeHeight()
 	if err != nil {
 		panic(err)
 	}
-	hdr, err := e.GetBlockHeader(curr)
-	if err != nil {
-		panic(err)
-	}
-	raw, err := hdr.MarshalJSON()
-	if err != nil {
-		panic(err)
+	var raw []byte
+	switch chainName {
+	case "eth":
+		hdr, err := e.Get1559BlockHeader(curr)
+		if err != nil {
+			panic(err)
+		}
+		raw, err = hdr.MarshalJSON()
+		if err != nil {
+			panic(err)
+		}
+	case "bsc":
+		epochHeight := curr - curr%200
+		pEpochHeight := epochHeight - 200
+
+		hdr, err := e.GetBlockHeader(epochHeight)
+		if err != nil {
+			panic(err)
+		}
+		phdr, err := e.GetBlockHeader(pEpochHeight)
+		if err != nil {
+			panic(err)
+		}
+		pvalidators, err := bsc.ParseValidators(phdr.Extra[32 : len(phdr.Extra)-65])
+		if err != nil {
+			panic(err)
+		}
+
+		if len(hdr.Extra) <= 65+32 {
+			panic(fmt.Sprintf("invalid epoch header at height:%d", epochHeight))
+		}
+		if len(phdr.Extra) <= 65+32 {
+			panic(fmt.Sprintf("invalid epoch header at height:%d", pEpochHeight))
+		}
+
+		genesisHeader := bsc.GenesisHeader{Header: *hdr, PrevValidators: []bsc.HeightAndValidators{
+			{Height: big.NewInt(int64(pEpochHeight)), Validators: pvalidators},
+		}}
+		raw, err = json.Marshal(genesisHeader)
+		if err != nil {
+			panic(err)
+		}
 	}
 
 	scmAbi, err := abi.JSON(strings.NewReader(header_sync_abi.HeaderSyncABI))
@@ -58,7 +95,6 @@ func SyncETHToZion(z *zion.ZionTools, e *ETHTools, signerArr []*zion.ZionSigner)
 		panic(fmt.Errorf("SyncETHToZion, get suggest gas price failed error: %s", err.Error()))
 	}
 	gasPrice = gasPrice.Mul(gasPrice, big.NewInt(1))
-
 	txData, err := scmAbi.Pack("syncGenesisHeader", config.DefConfig.ETHConfig.ChainId, raw)
 	if err != nil {
 		panic(fmt.Errorf("SyncETHToZion, scmAbi.Pack error:" + err.Error()))

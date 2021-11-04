@@ -22,7 +22,6 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
-	"github.com/ethereum/go-ethereum/contracts/native/header_sync/eth"
 	"io/ioutil"
 	"math/big"
 	"net/http"
@@ -31,6 +30,8 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/contracts/native/header_sync/eth"
+	ethtypes "github.com/ethereum/go-ethereum/contracts/native/header_sync/eth/types"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/polynetwork/zion-setup/log"
@@ -69,6 +70,13 @@ type BlockReq struct {
 }
 
 type BlockRep struct {
+	JsonRPC string           `json:"jsonrpc"`
+	Result  *ethtypes.Header `json:"result"`
+	Error   *jsonError       `json:"error,omitempty"`
+	Id      uint             `json:"id"`
+}
+
+type BlockRep1559 struct {
 	JsonRPC string      `json:"jsonrpc"`
 	Result  *eth.Header `json:"result"`
 	Error   *jsonError  `json:"error,omitempty"`
@@ -125,7 +133,7 @@ func (self *ETHTools) GetNodeHeight() (uint64, error) {
 	}
 }
 
-func (self *ETHTools) GetBlockHeader(height uint64) (*eth.Header, error) {
+func (self *ETHTools) GetBlockHeader(height uint64) (*ethtypes.Header, error) {
 	params := []interface{}{fmt.Sprintf("0x%x", height), true}
 	req := &BlockReq{
 		JsonRpc: "2.0",
@@ -148,6 +156,34 @@ func (self *ETHTools) GetBlockHeader(height uint64) (*eth.Header, error) {
 	}
 	if rsp.Error != nil {
 		return nil, fmt.Errorf("GetBlockHeader, unmarshal resp err: %s", rsp.Error.Message)
+	}
+
+	return rsp.Result, nil
+}
+
+func (self *ETHTools) Get1559BlockHeader(height uint64) (*eth.Header, error) {
+	params := []interface{}{fmt.Sprintf("0x%x", height), true}
+	req := &BlockReq{
+		JsonRpc: "2.0",
+		Method:  "eth_getBlockByNumber",
+		Params:  params,
+		Id:      1,
+	}
+	data, err := json.Marshal(req)
+	if err != nil {
+		return nil, fmt.Errorf("Get1559BlockHeader: marshal req err: %s", err)
+	}
+	resp, err := self.restclient.SendRestRequest(data)
+	if err != nil {
+		return nil, fmt.Errorf("Get1559BlockHeader err: %s", err)
+	}
+	rsp := &BlockRep1559{}
+	err = json.Unmarshal(resp, rsp)
+	if err != nil {
+		return nil, fmt.Errorf("Get1559BlockHeader, unmarshal resp err: %s", err)
+	}
+	if rsp.Error != nil {
+		return nil, fmt.Errorf("Get1559BlockHeader, unmarshal resp err: %s", rsp.Error.Message)
 	}
 
 	return rsp.Result, nil
