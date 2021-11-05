@@ -21,6 +21,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"github.com/ethereum/go-ethereum/contracts/native/header_sync/heco"
 	"math/big"
 	"strings"
 	"time"
@@ -54,6 +55,17 @@ func RegisterSideChain(method string, chainName string, z *zion.ZionTools, e *et
 		}
 		ex := bsc.ExtraInfo{
 			ChainID: chainId,
+		}
+		extra, _ = json.Marshal(ex)
+	case "heco":
+		blkToWait = 21
+		chainId, err := e.GetChainID()
+		if err != nil {
+			panic(err)
+		}
+		ex := heco.ExtraInfo{
+			ChainID: chainId,
+			Period:  3,
 		}
 		extra, _ = json.Marshal(ex)
 	default:
@@ -200,15 +212,42 @@ func SyncETHToZion(z *zion.ZionTools, e *eth.ETHTools, signerArr []*zion.ZionSig
 		if err != nil {
 			panic(err)
 		}
-
 		if len(hdr.Extra) <= 65+32 {
 			panic(fmt.Sprintf("invalid epoch header at height:%d", epochHeight))
 		}
 		if len(phdr.Extra) <= 65+32 {
 			panic(fmt.Sprintf("invalid epoch header at height:%d", pEpochHeight))
 		}
-
 		genesisHeader := bsc.GenesisHeader{Header: *hdr, PrevValidators: []bsc.HeightAndValidators{
+			{Height: big.NewInt(int64(pEpochHeight)), Validators: pvalidators},
+		}}
+		raw, err = json.Marshal(genesisHeader)
+		if err != nil {
+			panic(err)
+		}
+	case "heco":
+		epochHeight := curr - curr%200
+		pEpochHeight := epochHeight - 200
+
+		hdr, err := e.Get1559BlockHeader(epochHeight)
+		if err != nil {
+			panic(err)
+		}
+		phdr, err := e.Get1559BlockHeader(pEpochHeight)
+		if err != nil {
+			panic(err)
+		}
+		pvalidators, err := heco.ParseValidators(phdr.Extra[32 : len(phdr.Extra)-65])
+		if err != nil {
+			panic(err)
+		}
+		if len(hdr.Extra) <= 65+32 {
+			panic(fmt.Sprintf("invalid epoch header at height:%d", epochHeight))
+		}
+		if len(phdr.Extra) <= 65+32 {
+			panic(fmt.Sprintf("invalid epoch header at height:%d", pEpochHeight))
+		}
+		genesisHeader := heco.GenesisHeader{Header: *hdr, PrevValidators: []heco.HeightAndValidators{
 			{Height: big.NewInt(int64(pEpochHeight)), Validators: pvalidators},
 		}}
 		raw, err = json.Marshal(genesisHeader)
