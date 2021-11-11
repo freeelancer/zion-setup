@@ -40,6 +40,8 @@ type ETHConfig struct {
 	Eccm          string
 	ETHJsonRpcURL string
 	ETHPrivateKey string
+	//used for okex chain
+	TMRpcURL string
 }
 
 // DefConfig Default config instance

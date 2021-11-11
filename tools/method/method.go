@@ -21,7 +21,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"github.com/ethereum/go-ethereum/contracts/native/header_sync/heco"
+	"github.com/polynetwork/zion-setup/tools/tendermint"
 	"math/big"
 	"strings"
 	"time"
@@ -33,19 +33,23 @@ import (
 	"github.com/ethereum/go-ethereum/contracts/native/go_abi/header_sync_abi"
 	"github.com/ethereum/go-ethereum/contracts/native/go_abi/side_chain_manager_abi"
 	"github.com/ethereum/go-ethereum/contracts/native/header_sync/bsc"
+	"github.com/ethereum/go-ethereum/contracts/native/header_sync/heco"
+	"github.com/ethereum/go-ethereum/contracts/native/header_sync/okex"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/polynetwork/poly/native/service/header_sync/cosmos"
 	"github.com/polynetwork/zion-setup/config"
 	"github.com/polynetwork/zion-setup/log"
 	"github.com/polynetwork/zion-setup/tools/eth"
 	"github.com/polynetwork/zion-setup/tools/zion"
+	"github.com/tendermint/tendermint/rpc/client/http"
 )
 
 func RegisterSideChain(method string, chainName string, z *zion.ZionTools, e *eth.ETHTools, signer *zion.ZionSigner) bool {
 	var blkToWait uint64
 	var extra []byte
 	switch chainName {
-	case "eth":
+	case "eth", "oec":
 		blkToWait = 12
 	case "bsc":
 		blkToWait = 15
@@ -87,7 +91,7 @@ func RegisterSideChain(method string, chainName string, z *zion.ZionTools, e *et
 	gasPrice = gasPrice.Mul(gasPrice, big.NewInt(1))
 
 	txData, err := scmAbi.Pack(method, signer.Address, config.DefConfig.ETHConfig.ChainId, config.DefConfig.ETHConfig.Router,
-		config.DefConfig.ChainName, blkToWait, eccd, extra)
+		chainName, blkToWait, eccd, extra)
 	if err != nil {
 		panic(fmt.Errorf("RegisterEthChain, scmAbi.Pack error:" + err.Error()))
 	}
@@ -138,7 +142,7 @@ func ApproveRegisterSideChain(method string, z *zion.ZionTools, signerArr []*zio
 		panic(fmt.Errorf("ApproveRegisterSideChain, get suggest gas price failed error: %s", err.Error()))
 	}
 	gasPrice = gasPrice.Mul(gasPrice, big.NewInt(1))
-	duration := time.Second * 20
+	duration := time.Second * 300
 	timerCtx, cancelFunc := context.WithTimeout(context.Background(), duration)
 	defer cancelFunc()
 	for _, signer := range signerArr {
@@ -251,6 +255,30 @@ func SyncETHToZion(z *zion.ZionTools, e *eth.ETHTools, signerArr []*zion.ZionSig
 			{Height: big.NewInt(int64(pEpochHeight)), Validators: pvalidators},
 		}}
 		raw, err = json.Marshal(genesisHeader)
+		if err != nil {
+			panic(err)
+		}
+	case "oec":
+		oecCli, err := http.New(config.DefConfig.ETHConfig.TMRpcURL, "/websocket")
+		if err != nil {
+			panic(err)
+		}
+		codec := okex.NewCDC()
+		h := int64(curr)
+		res, err := oecCli.Commit(&h)
+		if err != nil {
+			panic(err)
+		}
+		vals, err := tendermint.GetValidators(oecCli, h)
+		if err != nil {
+			panic(err)
+		}
+		ch := &cosmos.CosmosHeader{
+			Header:  *res.Header,
+			Commit:  res.Commit,
+			Valsets: vals,
+		}
+		raw, err = codec.MarshalBinaryBare(ch)
 		if err != nil {
 			panic(err)
 		}

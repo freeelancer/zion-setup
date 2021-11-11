@@ -105,7 +105,7 @@ func main() {
 
 		switch config.DefConfig.ChainName {
 		case "eth", "heco", "bsc", "oec":
-			method.SyncETHToZion(z, e, signerArr[0:5], config.DefConfig.ChainName)
+			//method.SyncETHToZion(z, e, signerArr[0:5], config.DefConfig.ChainName)
 			method.SyncZionToETH(z, e)
 		}
 	default:
