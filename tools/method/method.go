@@ -49,6 +49,8 @@ func RegisterSideChain(method string, chainName string, z *zion.ZionTools, e *et
 	var blkToWait uint64
 	var extra []byte
 	switch chainName {
+	case "quorum":
+		blkToWait = 1
 	case "eth", "oec":
 		blkToWait = 12
 	case "bsc":
@@ -281,6 +283,16 @@ func SyncETHToZion(z *zion.ZionTools, e *eth.ETHTools, signerArr []*zion.ZionSig
 		raw, err = codec.MarshalBinaryBare(ch)
 		if err != nil {
 			panic(err)
+		}
+	case "quorum":
+		hdr, err := e.GetBlockHeader(curr)
+		if err != nil {
+			panic(err)
+		}
+		raw, err = hdr.MarshalJSON()
+		if err != nil {
+			log.Errorf("marshal header failed, err: %s", err)
+			return
 		}
 	default:
 		panic(fmt.Errorf("not supported chain name"))
