@@ -64,7 +64,7 @@ func main() {
 		}
 
 		switch config.DefConfig.ChainName {
-		case "eth", "bsc", "heco", "oec", "quorum", "arbitrum", "optimism", "fantom":
+		case "eth", "bsc", "heco", "oec", "quorum", "heimdall", "bor", "zilliqa", "arbitrum", "optimism", "fantom":
 			if method.RegisterSideChain("registerSideChain", config.DefConfig.ChainName, z, e, signerArr[0]) {
 				method.ApproveRegisterSideChain("approveRegisterSideChain", z, signerArr[1:6])
 			}
@@ -84,7 +84,7 @@ func main() {
 		}
 
 		switch config.DefConfig.ChainName {
-		case "eth", "heco", "bsc", "oec", "quorum", "arbitrum", "optimism", "fantom":
+		case "eth", "heco", "bsc", "oec", "quorum", "heimdall", "bor", "zilliqa", "arbitrum", "optimism", "fantom":
 			if method.RegisterSideChain("updateSideChain", config.DefConfig.ChainName, z, e, signerArr[0]) {
 				method.ApproveRegisterSideChain("approveUpdateSideChain", z, signerArr[1:6])
 			}
@@ -104,9 +104,11 @@ func main() {
 		}
 
 		switch config.DefConfig.ChainName {
-		case "eth", "heco", "bsc", "oec", "quorum":
+		case "eth", "heco", "bsc", "oec", "quorum", "bor":
 			method.SyncETHToZion(z, e, signerArr[0:5], config.DefConfig.ChainName)
 			method.SyncZionToETH(z, e)
+		case "heimdall":
+			method.SyncETHToZion(z, e, signerArr[0:5], config.DefConfig.ChainName)
 		}
 	default:
 		panic(fmt.Errorf("not supported method"))

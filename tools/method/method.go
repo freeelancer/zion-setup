@@ -21,7 +21,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"github.com/polynetwork/zion-setup/tools/tendermint"
 	"math/big"
 	"strings"
 	"time"
@@ -38,9 +37,11 @@ import (
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/polynetwork/poly/native/service/header_sync/cosmos"
+	"github.com/polynetwork/poly/native/service/header_sync/polygon"
 	"github.com/polynetwork/zion-setup/config"
 	"github.com/polynetwork/zion-setup/log"
 	"github.com/polynetwork/zion-setup/tools/eth"
+	"github.com/polynetwork/zion-setup/tools/tendermint"
 	"github.com/polynetwork/zion-setup/tools/zion"
 	"github.com/tendermint/tendermint/rpc/client/http"
 )
@@ -49,7 +50,7 @@ func RegisterSideChain(method string, chainName string, z *zion.ZionTools, e *et
 	var blkToWait uint64
 	var extra []byte
 	switch chainName {
-	case "quorum":
+	case "quorum", "heimdall":
 		blkToWait = 1
 	case "eth", "oec":
 		blkToWait = 12
@@ -72,6 +73,17 @@ func RegisterSideChain(method string, chainName string, z *zion.ZionTools, e *et
 		ex := heco.ExtraInfo{
 			ChainID: chainId,
 			Period:  3,
+		}
+		extra, _ = json.Marshal(ex)
+	case "bor":
+		blkToWait = 128
+		heimdallPolyChainID := config.DefConfig.ETHConfig.ChainId
+		ex := polygon.ExtraInfo{
+			Sprint:              64,
+			Period:              2,
+			ProducerDelay:       6,
+			BackupMultiplier:    2,
+			HeimdallPolyChainID: heimdallPolyChainID,
 		}
 		extra, _ = json.Marshal(ex)
 	default:
@@ -193,7 +205,7 @@ func SyncETHToZion(z *zion.ZionTools, e *eth.ETHTools, signerArr []*zion.ZionSig
 	log.Infof("current height of eth is %d", curr)
 	var raw []byte
 	switch chainName {
-	case "eth":
+	case "eth", "bor":
 		hdr, err := e.Get1559BlockHeader(curr)
 		if err != nil {
 			panic(err)
@@ -261,7 +273,7 @@ func SyncETHToZion(z *zion.ZionTools, e *eth.ETHTools, signerArr []*zion.ZionSig
 			panic(err)
 		}
 	case "oec":
-		oecCli, err := http.New(config.DefConfig.ETHConfig.TMRpcURL, "/websocket")
+		oecCli, err := http.New(config.DefConfig.ETHConfig.OKTMRpcURL, "/websocket")
 		if err != nil {
 			panic(err)
 		}
@@ -294,6 +306,8 @@ func SyncETHToZion(z *zion.ZionTools, e *eth.ETHTools, signerArr []*zion.ZionSig
 			log.Errorf("marshal header failed, err: %s", err)
 			return
 		}
+	case "heimdall":
+		raw, _ = hex.DecodeString(config.DefConfig.ETHConfig.PolygonHeader)
 	default:
 		panic(fmt.Errorf("not supported chain name"))
 	}

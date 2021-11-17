@@ -41,7 +41,9 @@ type ETHConfig struct {
 	ETHJsonRpcURL string
 	ETHPrivateKey string
 	//used for okex chain
-	TMRpcURL string
+	OKTMRpcURL string
+	//used for heimdall and bor
+	PolygonHeader string
 }
 
 // DefConfig Default config instance
