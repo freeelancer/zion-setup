@@ -205,7 +205,7 @@ func SyncETHToZion(z *zion.ZionTools, e *eth.ETHTools, signerArr []*zion.ZionSig
 	log.Infof("current height of eth is %d", curr)
 	var raw []byte
 	switch chainName {
-	case "eth", "bor":
+	case "eth":
 		hdr, err := e.Get1559BlockHeader(curr)
 		if err != nil {
 			panic(err)
@@ -306,7 +306,7 @@ func SyncETHToZion(z *zion.ZionTools, e *eth.ETHTools, signerArr []*zion.ZionSig
 			log.Errorf("marshal header failed, err: %s", err)
 			return
 		}
-	case "heimdall":
+	case "heimdall", "bor":
 		raw, _ = hex.DecodeString(config.DefConfig.ETHConfig.PolygonHeader)
 	default:
 		panic(fmt.Errorf("not supported chain name"))
