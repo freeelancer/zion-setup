@@ -77,7 +77,7 @@ func RegisterSideChain(method string, chainName string, z *zion.ZionTools, e *et
 		extra, _ = json.Marshal(ex)
 	case "bor":
 		blkToWait = 128
-		heimdallPolyChainID := config.DefConfig.ETHConfig.ChainId
+		heimdallPolyChainID := config.DefConfig.ETHConfig.HeimdallChainId
 		ex := polygon.ExtraInfo{
 			Sprint:              64,
 			Period:              2,

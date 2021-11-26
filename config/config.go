@@ -44,6 +44,8 @@ type ETHConfig struct {
 	OKTMRpcURL string
 	//used for heimdall and bor
 	PolygonHeader string
+	//used for bor
+	HeimdallChainId uint64
 }
 
 // DefConfig Default config instance
