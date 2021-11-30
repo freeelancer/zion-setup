@@ -124,7 +124,8 @@ func RegisterSideChain(method string, chainName string, z *zion.ZionTools, e *et
 	if err != nil {
 		panic(fmt.Errorf("RegisterEthChain, get chain id error: %s", err.Error()))
 	}
-	signedtx, err := types.SignTx(tx, types.NewEIP155Signer(chainID), signer.PrivateKey)
+	s := types.LatestSignerForChainID(chainID)
+	signedtx, err := types.SignTx(tx, s, signer.PrivateKey)
 	if err != nil {
 		panic(fmt.Errorf("SignTransaction failed:%v", err))
 	}
