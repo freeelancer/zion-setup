@@ -109,6 +109,8 @@ func main() {
 			method.SyncZionToETH(z, e)
 		case "heimdall":
 			method.SyncETHToZion(z, e, signerArr[0:5], config.DefConfig.ChainName)
+		case "arbitrum", "optimism", "fantom":
+			method.SyncZionToETH(z, e)
 		}
 	default:
 		panic(fmt.Errorf("not supported method"))
