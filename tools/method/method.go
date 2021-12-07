@@ -52,7 +52,7 @@ func RegisterSideChain(method string, chainName string, z *zion.ZionTools, e *et
 	switch chainName {
 	case "quorum", "heimdall":
 		blkToWait = 1
-	case "eth", "oec", "arbitrum", "optimism", "fantom":
+	case "eth", "oec", "arbitrum", "optimism", "fantom", "avalanche":
 		blkToWait = 12
 	case "bsc":
 		blkToWait = 15

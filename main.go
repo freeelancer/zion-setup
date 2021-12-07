@@ -109,7 +109,7 @@ func main() {
 			method.SyncZionToETH(z, e)
 		case "heimdall":
 			method.SyncETHToZion(z, e, signerArr[0:5], config.DefConfig.ChainName)
-		case "arbitrum", "optimism", "fantom":
+		case "arbitrum", "optimism", "fantom", "avalanche":
 			method.SyncZionToETH(z, e)
 		}
 	default:
