@@ -64,7 +64,7 @@ func main() {
 		}
 
 		switch config.DefConfig.ChainName {
-		case "eth", "bsc", "heco", "oec", "quorum", "heimdall", "bor", "zilliqa", "arbitrum", "optimism", "fantom":
+		case "eth", "bsc", "heco", "oec", "quorum", "heimdall", "bor", "zilliqa", "arbitrum", "optimism", "fantom", "avalanche":
 			if method.RegisterSideChain("registerSideChain", config.DefConfig.ChainName, z, e, signerArr[0]) {
 				method.ApproveRegisterSideChain("approveRegisterSideChain", z, signerArr[1:6])
 			}
