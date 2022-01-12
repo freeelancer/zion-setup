@@ -50,9 +50,9 @@ func RegisterSideChain(method string, chainName string, z *zion.ZionTools, e *et
 	var blkToWait uint64
 	var extra []byte
 	switch chainName {
-	case "quorum", "heimdall":
+	case "quorum", "heimdall", "ont":
 		blkToWait = 1
-	case "eth", "oec", "arbitrum", "optimism", "fantom", "avalanche":
+	case "eth", "oec", "arbitrum", "optimism", "fantom", "avalanche", "xdai":
 		blkToWait = 12
 	case "bsc":
 		blkToWait = 15
@@ -309,6 +309,8 @@ func SyncETHToZion(z *zion.ZionTools, e *eth.ETHTools, signerArr []*zion.ZionSig
 		}
 	case "heimdall", "bor":
 		raw, _ = hex.DecodeString(config.DefConfig.ETHConfig.PolygonHeader)
+	case "ont":
+		//TODO
 	default:
 		panic(fmt.Errorf("not supported chain name"))
 	}

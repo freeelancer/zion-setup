@@ -62,14 +62,8 @@ func main() {
 				signerArr = append(signerArr, signer)
 			}
 		}
-
-		switch config.DefConfig.ChainName {
-		case "eth", "bsc", "heco", "oec", "quorum", "heimdall", "bor", "zilliqa", "arbitrum", "optimism", "fantom", "avalanche":
-			if method.RegisterSideChain("registerSideChain", config.DefConfig.ChainName, z, e, signerArr[0]) {
-				method.ApproveRegisterSideChain("approveRegisterSideChain", z, signerArr[1:6])
-			}
-		default:
-			panic(fmt.Errorf("not supported chain name"))
+		if method.RegisterSideChain("registerSideChain", config.DefConfig.ChainName, z, e, signerArr[0]) {
+			method.ApproveRegisterSideChain("approveRegisterSideChain", z, signerArr[1:6])
 		}
 	case "update_side_chain":
 		signerArr := make([]*zion.ZionSigner, 0)
@@ -82,14 +76,8 @@ func main() {
 				signerArr = append(signerArr, signer)
 			}
 		}
-
-		switch config.DefConfig.ChainName {
-		case "eth", "heco", "bsc", "oec", "quorum", "heimdall", "bor", "zilliqa", "arbitrum", "optimism", "fantom":
-			if method.RegisterSideChain("updateSideChain", config.DefConfig.ChainName, z, e, signerArr[0]) {
-				method.ApproveRegisterSideChain("approveUpdateSideChain", z, signerArr[1:6])
-			}
-		default:
-			panic(fmt.Errorf("not supported chain name"))
+		if method.RegisterSideChain("updateSideChain", config.DefConfig.ChainName, z, e, signerArr[0]) {
+			method.ApproveRegisterSideChain("approveUpdateSideChain", z, signerArr[1:6])
 		}
 	case "sync_genesis_header":
 		signerArr := make([]*zion.ZionSigner, 0)
@@ -104,12 +92,12 @@ func main() {
 		}
 
 		switch config.DefConfig.ChainName {
-		case "eth", "heco", "bsc", "oec", "quorum", "bor":
+		case "eth", "heco", "bsc", "oec", "quorum", "bor", "ont":
 			method.SyncETHToZion(z, e, signerArr[0:5], config.DefConfig.ChainName)
 			method.SyncZionToETH(z, e)
 		case "heimdall":
 			method.SyncETHToZion(z, e, signerArr[0:5], config.DefConfig.ChainName)
-		case "arbitrum", "optimism", "fantom", "avalanche":
+		case "arbitrum", "optimism", "fantom", "avalanche", "xdai":
 			method.SyncZionToETH(z, e)
 		}
 	default:
