@@ -86,6 +86,23 @@ func RegisterSideChain(method string, chainName string, z *zion.ZionTools, e *et
 			HeimdallPolyChainID: heimdallPolyChainID,
 		}
 		extra, _ = json.Marshal(ex)
+
+	case "pixie":
+		blkToWait = 3
+		chainId, err := e.GetChainID() // testnet 666
+		if err != nil {
+			panic(err)
+		}
+		ex := heco.ExtraInfo{
+			ChainID: chainId,
+			Period:  3,
+		}
+		extra, _ = json.Marshal(ex)
+
+	case "zion":
+		blkToWait = 0
+		extra = []byte{}
+
 	default:
 		panic(fmt.Errorf("not supported chain name"))
 	}
@@ -273,6 +290,44 @@ func SyncETHToZion(z *zion.ZionTools, e *eth.ETHTools, signerArr []*zion.ZionSig
 		if err != nil {
 			panic(err)
 		}
+
+	case "pixie":
+		var backOffHeight uint64 = 200 * 5
+
+		epochHeight := curr - curr%200 - backOffHeight
+		pEpochHeight := epochHeight - 200 - backOffHeight
+
+		hdr, err := e.Get1559BlockHeader(epochHeight)
+		if err != nil {
+			panic(err)
+		}
+		phdr, err := e.Get1559BlockHeader(pEpochHeight)
+		if err != nil {
+			panic(err)
+		}
+
+		pvalidators, err := heco.ParseValidators(phdr.Extra[32 : len(phdr.Extra)-65])
+		if err != nil {
+			panic(err)
+		}
+		genesisHeader := heco.GenesisHeader{Header: *hdr, PrevValidators: []heco.HeightAndValidators{
+			{Height: big.NewInt(int64(pEpochHeight)), Validators: pvalidators},
+		}}
+		raw, err = json.Marshal(genesisHeader)
+		if err != nil {
+			panic(err)
+		}
+
+	case "zion":
+		hdr, err := e.GetZionHeader(curr)
+		if err != nil {
+			panic(err)
+		}
+		raw, err = hdr.MarshalJSON()
+		if err != nil {
+			panic(err)
+		}
+
 	case "oec":
 		oecCli, err := http.New(config.DefConfig.ETHConfig.OKTMRpcURL, "/websocket")
 		if err != nil {

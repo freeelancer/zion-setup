@@ -161,6 +161,14 @@ func (self *ETHTools) GetBlockHeader(height uint64) (*ethtypes.Header, error) {
 	return rsp.Result, nil
 }
 
+func (self *ETHTools) GetZionHeader(height uint64) (*types.Header, error) {
+	block, err := self.ethclient.BlockByNumber(context.Background(), new(big.Int).SetUint64(height))
+	if err != nil {
+		return nil, err
+	}
+	return block.Header(), nil
+}
+
 func (self *ETHTools) Get1559BlockHeader(height uint64) (*eth.Header, error) {
 	params := []interface{}{fmt.Sprintf("0x%x", height), true}
 	req := &BlockReq{
