@@ -68,8 +68,6 @@ func main() {
 			if method.RegisterSideChain("registerSideChain", config.DefConfig.ChainName, z, e, signerArr[0]) {
 				method.ApproveRegisterSideChain("approveRegisterSideChain", z, signerArr[1:6])
 			}
-		default:
-			panic(fmt.Errorf("not supported chain name"))
 		}
 	case "update_side_chain":
 		signerArr := make([]*zion.ZionSigner, 0)
@@ -88,8 +86,6 @@ func main() {
 			if method.RegisterSideChain("updateSideChain", config.DefConfig.ChainName, z, e, signerArr[0]) {
 				method.ApproveRegisterSideChain("approveUpdateSideChain", z, signerArr[1:6])
 			}
-		default:
-			panic(fmt.Errorf("not supported chain name"))
 		}
 	case "sync_genesis_header":
 		signerArr := make([]*zion.ZionSigner, 0)
@@ -104,12 +100,12 @@ func main() {
 		}
 
 		switch config.DefConfig.ChainName {
-		case "eth", "heco", "bsc", "oec", "quorum", "bor", "pixie", "zion":
+		case "eth", "heco", "bsc", "oec", "quorum", "bor", "ont", "pixie", "zion":
 			method.SyncETHToZion(z, e, signerArr[0:5], config.DefConfig.ChainName)
 			method.SyncZionToETH(z, e)
 		case "heimdall":
 			method.SyncETHToZion(z, e, signerArr[0:5], config.DefConfig.ChainName)
-		case "arbitrum", "optimism", "fantom", "avalanche":
+		case "arbitrum", "optimism", "fantom", "avalanche", "xdai":
 			method.SyncZionToETH(z, e)
 		}
 	default:
