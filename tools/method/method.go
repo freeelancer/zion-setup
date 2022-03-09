@@ -429,7 +429,11 @@ func SyncZionToETH(z *zion.ZionTools, e *eth.ETHTools) {
 	if err != nil {
 		panic(fmt.Errorf("SyncZionToETH, GetEpochInfo error: %s", err.Error()))
 	}
-	rawHeader, _, err := z.GetRawHeaderAndRawSeals(epochInfo.StartHeight - 1)
+	var h uint64
+	if epochInfo.StartHeight != 0 {
+		h = epochInfo.StartHeight - 1
+	}
+	rawHeader, _, err := z.GetRawHeaderAndRawSeals(h)
 	if err != nil {
 		panic(fmt.Errorf("SyncZionToETH, GetRawHeaderAndRawSeals error: %s", err.Error()))
 	}
