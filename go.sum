@@ -744,6 +744,8 @@ github.com/shirou/gopsutil v2.20.5-0.20200531151128-663af789c085+incompatible/go
 github.com/shirou/gopsutil v3.21.4-0.20210419000835-c7a38de76ee5+incompatible h1:Bn1aCHHRnjv4Bl16T8rcaFjYSrGrIZvpiGO6P3Q4GpU=
 github.com/shirou/gopsutil v3.21.4-0.20210419000835-c7a38de76ee5+incompatible/go.mod h1:5b4v6he4MtMOwMlS0TUMTu2PcXUg8+E1lC7eC3UO/RA=
 github.com/shurcooL/sanitized_anchor_name v1.0.0/go.mod h1:1NzhyTcUVG4SuEtjjoZeVRXNmyL/1OwPU0+IJeTBvfc=
+github.com/siovanus/tendermint v0.33.8-0.20220323005314-e27de1e4128d h1:5F7MhVUoCjEDF0CCbZyPYJ/qqg45iT6sjyc1Z47+FoU=
+github.com/siovanus/tendermint v0.33.8-0.20220323005314-e27de1e4128d/go.mod h1:0yUs9eIuuDq07nQql9BmI30FtYGcEC60Tu5JzB5IezM=
 github.com/sirupsen/logrus v1.2.0/go.mod h1:LxeOpSwHxABJmUn/MG1IvRgCAasNZTLOkJPxbbu5VWo=
 github.com/sirupsen/logrus v1.4.1/go.mod h1:ni0Sbl8bgC9z8RoU9G6nDWqqs/fq4eDPysMBDgk/93Q=
 github.com/sirupsen/logrus v1.4.2/go.mod h1:tLMulIdttU9McNUspp0xgXVQah82FyeX6MwdIuYE2rE=
@@ -817,8 +819,6 @@ github.com/tendermint/iavl v0.14.0/go.mod h1:QmfViflFiXzxKLQE4tAUuWQHq+RSuQFxabl
 github.com/tendermint/tendermint v0.33.2/go.mod h1:25DqB7YvV1tN3tHsjWoc2vFtlwICfrub9XO6UBO+4xk=
 github.com/tendermint/tendermint v0.33.3/go.mod h1:25DqB7YvV1tN3tHsjWoc2vFtlwICfrub9XO6UBO+4xk=
 github.com/tendermint/tendermint v0.33.5/go.mod h1:0yUs9eIuuDq07nQql9BmI30FtYGcEC60Tu5JzB5IezM=
-github.com/tendermint/tendermint v0.33.7 h1:b5CQD8ggDtl4u0EbXzabi0MaOw9NrcXker6ijEkAE74=
-github.com/tendermint/tendermint v0.33.7/go.mod h1:0yUs9eIuuDq07nQql9BmI30FtYGcEC60Tu5JzB5IezM=
 github.com/tendermint/tm-db v0.4.1/go.mod h1:JsJ6qzYkCGiGwm5GHl/H5GLI9XLb6qZX7PRe425dHAY=
 github.com/tendermint/tm-db v0.5.0/go.mod h1:lSq7q5WRR/njf1LnhiZ/lIJHk2S8Y1Zyq5oP/3o9C2U=
 github.com/tendermint/tm-db v0.5.1 h1:H9HDq8UEA7Eeg13kdYckkgwwkQLBnJGgX4PgLJRhieY=
