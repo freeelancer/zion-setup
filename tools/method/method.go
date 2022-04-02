@@ -14,6 +14,7 @@
 * You should have received a copy of the GNU Lesser General Public License
 * along with The poly network . If not, see <http://www.gnu.org/licenses/>.
  */
+
 package method
 
 import (
@@ -21,7 +22,11 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"github.com/joeqian10/neo3-gogogo/sc"
+	"github.com/ontio/ontology-crypto/keypair"
+	"github.com/polynetwork/poly-io-test/chains/ont"
 	"math/big"
+	"strconv"
 	"strings"
 	"time"
 
@@ -36,6 +41,10 @@ import (
 	"github.com/ethereum/go-ethereum/contracts/native/header_sync/okex"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/ethereum/go-ethereum/core/types"
+	block3 "github.com/joeqian10/neo3-gogogo/block"
+	helper3 "github.com/joeqian10/neo3-gogogo/helper"
+	io3 "github.com/joeqian10/neo3-gogogo/io"
+	rpc3 "github.com/joeqian10/neo3-gogogo/rpc"
 	"github.com/polynetwork/poly/native/service/header_sync/cosmos"
 	"github.com/polynetwork/poly/native/service/header_sync/polygon"
 	"github.com/polynetwork/zion-setup/config"
@@ -48,12 +57,21 @@ import (
 
 func RegisterSideChain(method string, chainName string, z *zion.ZionTools, e *eth.ETHTools, signer *zion.ZionSigner) bool {
 	var blkToWait uint64
-	var extra []byte
+	var extra, eccd []byte
+	var err error
 	switch chainName {
 	case "quorum", "heimdall", "ont":
 		blkToWait = 1
+		eccd, err = hex.DecodeString(strings.Replace(config.DefConfig.ETHConfig.Eccd, "0x", "", 1))
+		if err != nil {
+			panic(fmt.Errorf("RegisterEthChain, failed to decode eccd '%s' : %v", config.DefConfig.ETHConfig.Eccd, err))
+		}
 	case "eth", "oec", "arbitrum", "optimism", "fantom", "avalanche", "xdai":
 		blkToWait = 12
+		eccd, err = hex.DecodeString(strings.Replace(config.DefConfig.ETHConfig.Eccd, "0x", "", 1))
+		if err != nil {
+			panic(fmt.Errorf("RegisterEthChain, failed to decode eccd '%s' : %v", config.DefConfig.ETHConfig.Eccd, err))
+		}
 	case "bsc":
 		blkToWait = 15
 		chainId, err := e.GetChainID()
@@ -64,6 +82,10 @@ func RegisterSideChain(method string, chainName string, z *zion.ZionTools, e *et
 			ChainID: chainId,
 		}
 		extra, _ = json.Marshal(ex)
+		eccd, err = hex.DecodeString(strings.Replace(config.DefConfig.ETHConfig.Eccd, "0x", "", 1))
+		if err != nil {
+			panic(fmt.Errorf("RegisterEthChain, failed to decode eccd '%s' : %v", config.DefConfig.ETHConfig.Eccd, err))
+		}
 	case "heco":
 		blkToWait = 21
 		chainId, err := e.GetChainID()
@@ -75,6 +97,10 @@ func RegisterSideChain(method string, chainName string, z *zion.ZionTools, e *et
 			Period:  3,
 		}
 		extra, _ = json.Marshal(ex)
+		eccd, err = hex.DecodeString(strings.Replace(config.DefConfig.ETHConfig.Eccd, "0x", "", 1))
+		if err != nil {
+			panic(fmt.Errorf("RegisterEthChain, failed to decode eccd '%s' : %v", config.DefConfig.ETHConfig.Eccd, err))
+		}
 	case "bor":
 		blkToWait = 128
 		heimdallPolyChainID := config.DefConfig.ETHConfig.HeimdallChainId
@@ -86,7 +112,10 @@ func RegisterSideChain(method string, chainName string, z *zion.ZionTools, e *et
 			HeimdallPolyChainID: heimdallPolyChainID,
 		}
 		extra, _ = json.Marshal(ex)
-
+		eccd, err = hex.DecodeString(strings.Replace(config.DefConfig.ETHConfig.Eccd, "0x", "", 1))
+		if err != nil {
+			panic(fmt.Errorf("RegisterEthChain, failed to decode eccd '%s' : %v", config.DefConfig.ETHConfig.Eccd, err))
+		}
 	case "pixie":
 		blkToWait = 3
 		chainId, err := e.GetChainID() // testnet 666
@@ -98,7 +127,17 @@ func RegisterSideChain(method string, chainName string, z *zion.ZionTools, e *et
 			Period:  3,
 		}
 		extra, _ = json.Marshal(ex)
-
+		eccd, err = hex.DecodeString(strings.Replace(config.DefConfig.ETHConfig.Eccd, "0x", "", 1))
+		if err != nil {
+			panic(fmt.Errorf("RegisterEthChain, failed to decode eccd '%s' : %v", config.DefConfig.ETHConfig.Eccd, err))
+		}
+	case "neo3":
+		blkToWait = 1
+		extra = helper3.UInt32ToBytes(config.DefConfig.Neo3Config.Neo3Magic)
+		eccd = helper3.HexToBytes(config.DefConfig.Neo3Config.Neo3CCMC)
+		if len(eccd) != 4 {
+			panic(fmt.Errorf("incorrect Neo3CCMC length"))
+		}
 	case "zion":
 		blkToWait = 0
 		extra = []byte{}
@@ -107,10 +146,6 @@ func RegisterSideChain(method string, chainName string, z *zion.ZionTools, e *et
 		panic(fmt.Errorf("not supported chain name"))
 	}
 
-	eccd, err := hex.DecodeString(strings.Replace(config.DefConfig.ETHConfig.Eccd, "0x", "", 1))
-	if err != nil {
-		panic(fmt.Errorf("RegisterEthChain, failed to decode eccd '%s' : %v", config.DefConfig.ETHConfig.Eccd, err))
-	}
 	scmAbi, err := abi.JSON(strings.NewReader(side_chain_manager_abi.SideChainManagerABI))
 	if err != nil {
 		panic(fmt.Errorf("RegisterEthChain, abi.JSON error:" + err.Error()))
@@ -365,7 +400,23 @@ func SyncETHToZion(z *zion.ZionTools, e *eth.ETHTools, signerArr []*zion.ZionSig
 	case "heimdall", "bor":
 		raw, _ = hex.DecodeString(config.DefConfig.ETHConfig.PolygonHeader)
 	case "ont":
-		//TODO
+	//TODO
+	case "neo3":
+		cli := rpc3.NewClient(config.DefConfig.Neo3Config.Neo3Url)
+		resp := cli.GetBlockHeader(strconv.Itoa(int(config.DefConfig.Neo3Config.Neo3Epoch)))
+		if resp.HasError() {
+			panic(fmt.Errorf("failed to get header: %v", resp.Error.Message))
+		}
+		header, err := block3.NewBlockHeaderFromRPC(&resp.Result)
+		if err != nil {
+			panic(err)
+		}
+		buf := io3.NewBufBinaryWriter()
+		header.Serialize(buf.BinaryWriter)
+		if buf.Err != nil {
+			panic(buf.Err)
+		}
+		raw = buf.Bytes()
 	default:
 		panic(fmt.Errorf("not supported chain name"))
 	}
@@ -483,4 +534,86 @@ func SyncZionToETH(z *zion.ZionTools, e *eth.ETHTools) {
 	}
 	e.WaitTransactionConfirm(signedtx.Hash())
 	log.Infof("successful to sync zion genesis header to Ethereum: ( txhash: %s )", signedtx.Hash().String())
+}
+
+func SyncZionToNeo3(z *zion.ZionTools) {
+	epochInfo, err := z.GetEpochInfo()
+	if err != nil {
+		panic(fmt.Errorf("SyncZionToNeo3, GetEpochInfo error: %s", err.Error()))
+	}
+	var h uint64
+	if epochInfo.StartHeight != 0 {
+		h = epochInfo.StartHeight - 1
+	}
+	rawHeader, _, err := z.GetRawHeaderAndRawSeals(h)
+	if err != nil {
+		panic(fmt.Errorf("SyncZionToNeo3, GetRawHeaderAndRawSeals error: %s", err.Error()))
+	}
+	// TODO: how to sync poly header to Neo3
+	//
+	//cp1 := sc.ContractParameter{
+	//	Type:  sc.ByteArray,
+	//	Value: polyHeader.Header.GetMessage(),
+	//}
+	//// public keys
+	//info := &vconfig.VbftBlockInfo{}
+	//if err := json.Unmarshal(polyHeader.Header.ConsensusPayload, info); err != nil {
+	//	return fmt.Errorf("commitGenesisHeader - unmarshal blockInfo error: %s", err)
+	//}
+	//var bookkeepers []keypair.PublicKey
+	//for _, peer := range info.NewChainConfig.Peers {
+	//	keystr, _ := hex.DecodeString(peer.ID)
+	//	key, _ := keypair.DeserializePublicKey(keystr)
+	//	bookkeepers = append(bookkeepers, key)
+	//}
+	//bookkeepers = keypair.SortPublicKeys(bookkeepers)
+	//publickeys := make([]byte, 0)
+	//for _, key := range bookkeepers {
+	//	publickeys = append(publickeys, ont.GetOntNoCompressKey(key)...)
+	//}
+	//cp2 := sc.ContractParameter{
+	//	Type:  sc.ByteArray,
+	//	Value: publickeys,
+	//}
+	//
+	//invoker, err := neo3.NewNeo3Invoker()
+	//if err != nil {
+	//	return fmt.Errorf("NewNeo3Invoker err: %v", err)
+	//}
+	//// build script
+	//scriptHash, err := helper3.UInt160FromString(config.DefConfig.Neo3CCMC) // big endian
+	//if err != nil {
+	//	return fmt.Errorf("neo3 ccmc conversion error: %s", err)
+	//}
+	//
+	//script, err := sc3.MakeScript(scriptHash, "InitGenesisBlock", []interface{}{cp1, cp2})
+	//if err != nil {
+	//	return fmt.Errorf("neo3 sc.MakeScript error: %s", err)
+	//}
+	//
+	//balancesGas, err := invoker.GetAccountAndBalance(tx3.GasToken)
+	//if err != nil {
+	//	return fmt.Errorf("neo3 GetAccountAndBalance error: %s", err)
+	//}
+	//
+	//// make transaction
+	//trx, err := invoker.MakeTransaction(script, nil, []tx3.ITransactionAttribute{}, balancesGas)
+	//if err != nil {
+	//	return fmt.Errorf("neo3 MakeTransaction error: %s", err)
+	//}
+	//
+	//// sign transaction
+	//trx, err = invoker.SignTransaction(trx, config.DefConfig.Neo3Magic)
+	//if err != nil {
+	//	return fmt.Errorf("neo3 SignTransaction error: %s", err)
+	//}
+	//rawTxString := crypto3.Base64Encode(trx.ToByteArray())
+	//
+	//// send the raw transaction
+	//response := invoker.Client.SendRawTransaction(rawTxString)
+	//if response.HasError() {
+	//	return fmt.Errorf("initGenesisBlock on neo3, SendRawTx err: %v", err)
+	//}
+	//log.Infof("sync poly header to neo3 as genesis, neo3TxHash: %s", trx.GetHash().String())
+
 }

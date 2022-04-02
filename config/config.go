@@ -31,6 +31,7 @@ type Config struct {
 	NodeKeyList    []string
 	ChainName      string
 	ETHConfig      *ETHConfig
+	Neo3Config     *Neo3Config
 }
 
 type ETHConfig struct {
@@ -46,6 +47,16 @@ type ETHConfig struct {
 	PolygonHeader string
 	//used for bor
 	HeimdallChainId uint64
+}
+
+type Neo3Config struct {
+	Neo3CCMC           string
+	Neo3Url            string
+	Neo3Wallet         string
+	Neo3Pwd            string
+	Neo3Magic          uint32
+	Neo3AddressVersion byte
+	Neo3Epoch          uint32
 }
 
 // DefConfig Default config instance
