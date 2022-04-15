@@ -22,9 +22,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"github.com/joeqian10/neo3-gogogo/sc"
-	"github.com/ontio/ontology-crypto/keypair"
-	"github.com/polynetwork/poly-io-test/chains/ont"
 	"math/big"
 	"strconv"
 	"strings"
@@ -537,18 +534,18 @@ func SyncZionToETH(z *zion.ZionTools, e *eth.ETHTools) {
 }
 
 func SyncZionToNeo3(z *zion.ZionTools) {
-	epochInfo, err := z.GetEpochInfo()
-	if err != nil {
-		panic(fmt.Errorf("SyncZionToNeo3, GetEpochInfo error: %s", err.Error()))
-	}
-	var h uint64
-	if epochInfo.StartHeight != 0 {
-		h = epochInfo.StartHeight - 1
-	}
-	rawHeader, _, err := z.GetRawHeaderAndRawSeals(h)
-	if err != nil {
-		panic(fmt.Errorf("SyncZionToNeo3, GetRawHeaderAndRawSeals error: %s", err.Error()))
-	}
+	//epochInfo, err := z.GetEpochInfo()
+	//if err != nil {
+	//	panic(fmt.Errorf("SyncZionToNeo3, GetEpochInfo error: %s", err.Error()))
+	//}
+	//var h uint64
+	//if epochInfo.StartHeight != 0 {
+	//	h = epochInfo.StartHeight - 1
+	//}
+	//rawHeader, _, err := z.GetRawHeaderAndRawSeals(h)
+	//if err != nil {
+	//	panic(fmt.Errorf("SyncZionToNeo3, GetRawHeaderAndRawSeals error: %s", err.Error()))
+	//}
 	// TODO: how to sync poly header to Neo3
 	//
 	//cp1 := sc.ContractParameter{
