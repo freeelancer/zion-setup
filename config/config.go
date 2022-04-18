@@ -41,6 +41,10 @@ type ETHConfig struct {
 	Eccm          string
 	ETHJsonRpcURL string
 	ETHPrivateKey string
+	//used for Ont chain
+	OntRpcURL string
+	//used for Ont chain
+	OntEpoch uint32
 	//used for okex chain
 	OKTMRpcURL string
 	//used for heimdall and bor
