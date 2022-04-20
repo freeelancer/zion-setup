@@ -403,7 +403,14 @@ func SyncETHToZion(z *zion.ZionTools, e *eth.ETHTools, signerArr []*zion.ZionSig
 	case "heimdall", "bor":
 		raw, _ = hex.DecodeString(config.DefConfig.ETHConfig.PolygonHeader)
 	case "ont":
-	//TODO
+		ontCli := ontology_go_sdk.NewOntologySdk()
+		ontCli.NewRpcClient().SetAddress(config.DefConfig.ETHConfig.OntRpcURL)
+
+		genesisBlock, err := ontCli.GetBlockByHeight(config.DefConfig.ETHConfig.OntEpoch)
+		if err != nil {
+			panic(err)
+		}
+		raw = genesisBlock.Header.ToArray()
 	case "neo3":
 		cli := rpc3.NewClient(config.DefConfig.Neo3Config.Neo3Url)
 		resp := cli.GetBlockHeader(strconv.Itoa(int(config.DefConfig.Neo3Config.Neo3Epoch)))
