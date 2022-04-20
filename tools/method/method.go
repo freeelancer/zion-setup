@@ -24,7 +24,6 @@ import (
 	"fmt"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/node_manager"
 	"github.com/ethereum/go-ethereum/rlp"
-	"github.com/joeqian10/neo3-gogogo/sc"
 	"math/big"
 	"strconv"
 	"strings"
@@ -591,13 +590,13 @@ func SyncZionToNeo3(z *zion.ZionTools) {
 	//0x03b838fa2387beb3a56aed86e447309f8844cb208387c63af64ad740729b5c0a27
 
 	// create contract parameter
-	cp1 := sc.ContractParameter{
-		Type:  sc.ByteArray,
+	cp1 := sc3.ContractParameter{
+		Type:  sc3.ByteArray,
 		Value: rawHeader,
 	}
 
-	cp2 := sc.ContractParameter{
-		Type:  sc.ByteArray,
+	cp2 := sc3.ContractParameter{
+		Type:  sc3.ByteArray,
 		Value: bs,
 	}
 
