@@ -136,9 +136,8 @@ func RegisterSideChain(method string, chainName string, z *zion.ZionTools, e *et
 		if len(eccd) != 4 {
 			panic(fmt.Errorf("incorrect Neo3CCMC length"))
 		}
-	case "zion":
-		blkToWait = 0
-		extra = []byte{}
+	case "zion", "switcheo":
+		blkToWait = 1
 
 	default:
 		panic(fmt.Errorf("not supported chain name"))
