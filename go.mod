@@ -5,7 +5,7 @@ go 1.17
 require (
 	github.com/KSlashh/poly-abi v0.0.0-20211223100118-850e8abcc4f4
 	github.com/ethereum/go-ethereum v1.10.11
-	github.com/joeqian10/neo3-gogogo v0.3.8
+	github.com/joeqian10/neo3-gogogo v1.1.0
 	github.com/ontio/ontology v1.11.1-0.20200812075204-26cf1fa5dd47
 	github.com/ontio/ontology-crypto v1.0.9
 	github.com/polynetwork/poly v1.8.3
