@@ -19,6 +19,7 @@ package method
 
 import (
 	"context"
+	"crypto/ecdsa"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -33,15 +34,23 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/contracts/native/go_abi/header_sync_abi"
 	"github.com/ethereum/go-ethereum/contracts/native/go_abi/side_chain_manager_abi"
+	"github.com/ethereum/go-ethereum/contracts/native/governance/node_manager"
 	"github.com/ethereum/go-ethereum/contracts/native/header_sync/bsc"
 	"github.com/ethereum/go-ethereum/contracts/native/header_sync/heco"
 	"github.com/ethereum/go-ethereum/contracts/native/header_sync/okex"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/crypto"
+
 	block3 "github.com/joeqian10/neo3-gogogo/block"
+	crypto3 "github.com/joeqian10/neo3-gogogo/crypto"
 	helper3 "github.com/joeqian10/neo3-gogogo/helper"
 	io3 "github.com/joeqian10/neo3-gogogo/io"
 	rpc3 "github.com/joeqian10/neo3-gogogo/rpc"
+	sc3 "github.com/joeqian10/neo3-gogogo/sc"
+	tx3 "github.com/joeqian10/neo3-gogogo/tx"
+	wallet3 "github.com/joeqian10/neo3-gogogo/wallet"
+
 	ontology_go_sdk "github.com/ontio/ontology-go-sdk"
 	"github.com/polynetwork/poly/native/service/header_sync/cosmos"
 	"github.com/polynetwork/poly/native/service/header_sync/polygon"
@@ -49,6 +58,7 @@ import (
 	"github.com/polynetwork/zion-setup/log"
 	cosmos2 "github.com/polynetwork/zion-setup/tools/cosmos"
 	"github.com/polynetwork/zion-setup/tools/eth"
+	"github.com/polynetwork/zion-setup/tools/neo3"
 	"github.com/polynetwork/zion-setup/tools/tendermint"
 	"github.com/polynetwork/zion-setup/tools/zion"
 	"github.com/tendermint/tendermint/rpc/client/http"
@@ -564,83 +574,146 @@ func SyncZionToETH(z *zion.ZionTools, e *eth.ETHTools) {
 }
 
 func SyncZionToNeo3(z *zion.ZionTools) {
-	//epochInfo, err := z.GetEpochInfo()
-	//if err != nil {
-	//	panic(fmt.Errorf("SyncZionToNeo3, GetEpochInfo error: %s", err.Error()))
-	//}
-	//var h uint64
-	//if epochInfo.StartHeight != 0 {
-	//	h = epochInfo.StartHeight - 1
-	//}
-	//rawHeader, _, err := z.GetRawHeaderAndRawSeals(h)
-	//if err != nil {
-	//	panic(fmt.Errorf("SyncZionToNeo3, GetRawHeaderAndRawSeals error: %s", err.Error()))
-	//}
-	// TODO: how to sync poly header to Neo3
-	//
-	//cp1 := sc.ContractParameter{
-	//	Type:  sc.ByteArray,
-	//	Value: polyHeader.Header.GetMessage(),
-	//}
-	//// public keys
-	//info := &vconfig.VbftBlockInfo{}
-	//if err := json.Unmarshal(polyHeader.Header.ConsensusPayload, info); err != nil {
-	//	return fmt.Errorf("commitGenesisHeader - unmarshal blockInfo error: %s", err)
-	//}
-	//var bookkeepers []keypair.PublicKey
-	//for _, peer := range info.NewChainConfig.Peers {
-	//	keystr, _ := hex.DecodeString(peer.ID)
-	//	key, _ := keypair.DeserializePublicKey(keystr)
-	//	bookkeepers = append(bookkeepers, key)
-	//}
-	//bookkeepers = keypair.SortPublicKeys(bookkeepers)
-	//publickeys := make([]byte, 0)
-	//for _, key := range bookkeepers {
-	//	publickeys = append(publickeys, ont.GetOntNoCompressKey(key)...)
-	//}
-	//cp2 := sc.ContractParameter{
-	//	Type:  sc.ByteArray,
-	//	Value: publickeys,
-	//}
-	//
-	//invoker, err := neo3.NewNeo3Invoker()
-	//if err != nil {
-	//	return fmt.Errorf("NewNeo3Invoker err: %v", err)
-	//}
-	//// build script
-	//scriptHash, err := helper3.UInt160FromString(config.DefConfig.Neo3CCMC) // big endian
-	//if err != nil {
-	//	return fmt.Errorf("neo3 ccmc conversion error: %s", err)
-	//}
-	//
-	//script, err := sc3.MakeScript(scriptHash, "InitGenesisBlock", []interface{}{cp1, cp2})
-	//if err != nil {
-	//	return fmt.Errorf("neo3 sc.MakeScript error: %s", err)
-	//}
-	//
-	//balancesGas, err := invoker.GetAccountAndBalance(tx3.GasToken)
-	//if err != nil {
-	//	return fmt.Errorf("neo3 GetAccountAndBalance error: %s", err)
-	//}
-	//
-	//// make transaction
-	//trx, err := invoker.MakeTransaction(script, nil, []tx3.ITransactionAttribute{}, balancesGas)
-	//if err != nil {
-	//	return fmt.Errorf("neo3 MakeTransaction error: %s", err)
-	//}
-	//
-	//// sign transaction
-	//trx, err = invoker.SignTransaction(trx, config.DefConfig.Neo3Magic)
-	//if err != nil {
-	//	return fmt.Errorf("neo3 SignTransaction error: %s", err)
-	//}
-	//rawTxString := crypto3.Base64Encode(trx.ToByteArray())
-	//
-	//// send the raw transaction
-	//response := invoker.Client.SendRawTransaction(rawTxString)
-	//if response.HasError() {
-	//	return fmt.Errorf("initGenesisBlock on neo3, SendRawTx err: %v", err)
-	//}
-	//log.Infof("sync poly header to neo3 as genesis, neo3TxHash: %s", trx.GetHash().String())
+	// get zion genesis validators
+	node_manager.InitABI()
+	input := new(node_manager.MethodGetEpochByIDInput)
+	input.EpochID = 1 // starts from 1
+	payload, err := input.Encode()
+	if err != nil {
+		panic(fmt.Errorf("SyncZionToNeo3, MethodGetEpochByIDInput.Encode error: %s", err.Error()))
+	}
+	arg := ethereum.CallMsg{
+		From: common.Address{},
+		To:   &utils.NodeManagerContractAddress,
+		Data: payload,
+	}
+	res, err := z.GetEthClient().CallContract(context.Background(), arg, nil)
+	if err != nil {
+		panic(fmt.Errorf("SyncZionToNeo3, EthClient.CallContract error: %s", err.Error()))
+	}
+	output := new(node_manager.MethodEpochOutput)
+	if err = output.Decode(res); err != nil {
+		panic(fmt.Errorf("SyncZionToNeo3, MethodEpochOutput error: %s", err.Error()))
+	}
+	epochInfo := output.Epoch
+	peers := epochInfo.Peers.List
+	// sort public keys
+	pubKeyList := []*ecdsa.PublicKey{}
+	for _, peer := range peers {
+		s := strings.TrimPrefix(peer.PubKey, "0x")
+		keyBytes, _ := hex.DecodeString(s)
+		pubKey, _ := crypto.DecompressPubkey(keyBytes)
+		pubKeyList = append(pubKeyList, pubKey)
+	}
+	bs := []byte{}
+	pubKeyList = neo3.SortPublicKeys(pubKeyList)
+	for _, pubKey := range pubKeyList {
+		keyBytes := crypto.CompressPubkey(pubKey)
+		bs = append(bs, keyBytes...)
+	}
 
+	// peer.PubKey example
+	//0x02c07fb7d48eac559a2483e249d27841c18c7ce5dbbbf2796a6963cc9cef27cabd
+	//0x02f5135ae0853af71f017a8ecb68e720b729ab92c7123c686e75b7487d4a57ae07
+	//0x03ecac0ebe7224cfd04056c940605a4a9d4cb0367cf5819bf7e5502bf44f68bdd4
+	//0x03d0ecfd09db6b1e4f59da7ebde8f6c3ea3ed09f06f5190477ae4ee528ec692fa8
+	//0x0244e509103445d5e8fd290608308d16d08c739655d6994254e413bc1a06783856
+	//0x023884de29148505a8d862992e5721767d4b47ff52ffab4c2d2527182d812a6d95
+	//0x03b838fa2387beb3a56aed86e447309f8844cb208387c63af64ad740729b5c0a27
+	// after sort
+	//023884de29148505a8d862992e5721767d4b47ff52ffab4c2d2527182d812a6d95
+	//0244e509103445d5e8fd290608308d16d08c739655d6994254e413bc1a06783856
+	//03b838fa2387beb3a56aed86e447309f8844cb208387c63af64ad740729b5c0a27
+	//02c07fb7d48eac559a2483e249d27841c18c7ce5dbbbf2796a6963cc9cef27cabd
+	//03d0ecfd09db6b1e4f59da7ebde8f6c3ea3ed09f06f5190477ae4ee528ec692fa8
+	//03ecac0ebe7224cfd04056c940605a4a9d4cb0367cf5819bf7e5502bf44f68bdd4
+	//02f5135ae0853af71f017a8ecb68e720b729ab92c7123c686e75b7487d4a57ae07
+
+	// create contract parameter
+	cp1 := sc3.ContractParameter{
+		Type:  sc3.ByteArray,
+		Value: bs,
+	}
+
+	// build script
+	scriptHash, err := helper3.UInt160FromString(config.DefConfig.Neo3Config.Neo3CCMC) // big endian
+	if err != nil {
+		panic(fmt.Errorf("SyncZionToNeo3, neo3 ccmc conversion error: %s", err.Error()))
+	}
+
+	script, err := sc3.MakeScript(scriptHash, "initGenesisBlock", []interface{}{cp1})
+	if err != nil {
+		panic(fmt.Errorf("SyncZionToNeo3, neo3 sc.MakeScript error: %s", err.Error()))
+	}
+
+	// create wallet helper
+	neoRpcClient := rpc3.NewClient(config.DefConfig.Neo3Config.Neo3Url)
+	ps := helper3.ProtocolSettings{
+		Magic:          config.DefConfig.Neo3Config.Neo3Magic,
+		AddressVersion: config.DefConfig.Neo3Config.Neo3AddressVersion,
+	}
+	w, err := wallet3.NewNEP6Wallet(config.DefConfig.Neo3Config.Neo3Wallet, &ps, nil, nil)
+	if err != nil {
+		panic(fmt.Errorf("SyncZionToNeo3, neo3 NewNEP6Wallet error: %s", err.Error()))
+	}
+	err = w.Unlock(config.DefConfig.Neo3Config.Neo3Pwd)
+	if err != nil {
+		panic(fmt.Errorf("SyncZionToNeo3, neo3 NEP6Wallet.Unlock error: %s", err.Error()))
+	}
+	wh := wallet3.NewWalletHelperFromWallet(neoRpcClient, w)
+
+	balancesGas, err := wh.GetAccountAndBalance(tx3.GasToken)
+	if err != nil {
+		panic(fmt.Errorf("SyncZionToNeo3, wh.GetAccountAndBalance error: %s", err.Error()))
+	}
+
+	// make transaction
+	trx, err := wh.MakeTransaction(script, nil, []tx3.ITransactionAttribute{}, balancesGas)
+	if err != nil {
+		panic(fmt.Errorf("SyncZionToNeo3, wh.MakeTransaction error: %s", err.Error()))
+	}
+
+	// sign transaction
+	trx, err = wh.SignTransaction(trx, config.DefConfig.Neo3Config.Neo3Magic)
+	if err != nil {
+		panic(fmt.Errorf("SyncZionToNeo3, wh.SignTransaction error: %s", err.Error()))
+	}
+	rawTxString := crypto3.Base64Encode(trx.ToByteArray())
+
+	// send the raw transaction
+	response := wh.Client.SendRawTransaction(rawTxString)
+	if response.HasError() {
+		panic(fmt.Errorf("SyncZionToNeo3, neo3 SendRawTransaction error: %s", response.GetErrorInfo()))
+	}
+	log.Infof("sync poly header to neo3 as genesis, neo3TxHash: %s", trx.GetHash().String())
+
+	// wait for confirmation on neo3
+	count := 0
+	for {
+		time.Sleep(15 * time.Second) // neo3 block time = 15s
+		count++
+		response2 := wh.Client.GetRawTransaction(trx.GetHash().String())
+		if response2.HasError() {
+			if strings.Contains(response2.GetErrorInfo(), "Unknown transaction") {
+				if count<2 {
+					continue
+				} else {
+					panic(fmt.Errorf("SyncZionToNeo3, neo3Tx: %s is not confirmed after 30s", trx.GetHash().String()))
+				}
+			} else {
+				panic(fmt.Errorf("SyncZionToNeo3, neo3 GetRawTransaction error: %s", response2.GetErrorInfo()))
+			}
+		} else {
+			if response2.Result.Hash == "" {
+				if count<2 {
+					continue
+				} else {
+					panic(fmt.Errorf("SyncZionToNeo3, neo3Tx: %s is not confirmed after 30s", trx.GetHash().String()))
+				}
+			} else {
+				log.Infof("sync poly header to neo3 as genesis, neo3TxHash: %s confirmed", response2.Result.Hash)
+				break
+			}
+		}
+	}
 }

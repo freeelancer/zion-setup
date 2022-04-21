@@ -491,8 +491,8 @@ github.com/jmhodges/levigo v1.0.0 h1:q5EC36kV79HWeTBWsod3mG11EgStG3qArTKcvlksN1U
 github.com/jmhodges/levigo v1.0.0/go.mod h1:Q6Qx+uH3RAqyK4rFQroq9RL7mdkABMcfhEI+nNuzMJQ=
 github.com/joeqian10/neo-gogogo v0.0.0-20200611102831-c17de5e1f0f8/go.mod h1:1fVDp4U1ROZQBRIooecbGNHHJpfs3bG9528sqlZ096g=
 github.com/joeqian10/neo-gogogo v1.1.0/go.mod h1:1fVDp4U1ROZQBRIooecbGNHHJpfs3bG9528sqlZ096g=
-github.com/joeqian10/neo3-gogogo v0.3.8 h1:oOAcdUeIFjE4g+93Fsgf/fjYkZdOPt3PNefE223Mi/A=
-github.com/joeqian10/neo3-gogogo v0.3.8/go.mod h1:k0wb1hcBjjspDpyHtEXIpDUEXAw5SfX7coi5AkNtxoU=
+github.com/joeqian10/neo3-gogogo v1.1.0 h1:8qbpQgHCX9X0+euM2cEMO63uLJrnoZcyq6HLVZTYVks=
+github.com/joeqian10/neo3-gogogo v1.1.0/go.mod h1:k0wb1hcBjjspDpyHtEXIpDUEXAw5SfX7coi5AkNtxoU=
 github.com/joeqian10/neo3-gogogo-legacy v1.0.0/go.mod h1:PsVfMQ3kQVb4v3vCi0kbVLqB+KBU3DYF+AuIFH0M2UU=
 github.com/jonboulle/clockwork v0.1.0/go.mod h1:Ii8DK3G1RaLaWxj9trq07+26W01tbo22gdxWY5EU2bo=
 github.com/jpillora/backoff v1.0.0/go.mod h1:J/6gKK9jxlEcS3zixgDgUAsiuZ7yrSoa/FX5e0EB2j4=
