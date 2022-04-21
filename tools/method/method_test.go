@@ -2,14 +2,18 @@ package method
 
 import (
 	"context"
+	"crypto/ecdsa"
 	"encoding/hex"
 	"fmt"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/node_manager"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/joeqian10/neo3-gogogo/helper"
+	"github.com/polynetwork/zion-setup/tools/neo3"
 	"github.com/polynetwork/zion-setup/tools/zion"
+	"strings"
 	"testing"
 )
 
@@ -63,12 +67,24 @@ func TestSyncZionToNeo3_3(t *testing.T) {
 		panic(fmt.Errorf("SyncZionToNeo3, MethodEpochOutput error: %s", err.Error()))
 	}
 	epochInfo := output.Epoch
-	bs := []byte{}
 
 	peers := epochInfo.Peers.List
+	// sort public keys
+	pubKeyList := []*ecdsa.PublicKey{}
+	fmt.Println("before sort")
 	for _, peer := range peers {
-		fmt.Println(peer.PubKey)
-		keyBytes, _ := hex.DecodeString(peer.PubKey)
+		s := strings.TrimPrefix(peer.PubKey, "0x")
+		keyBytes, _ := hex.DecodeString(s)
+		fmt.Println(hex.EncodeToString(keyBytes))
+		pubKey, _ := crypto.DecompressPubkey(keyBytes)
+		pubKeyList = append(pubKeyList, pubKey)
+	}
+	bs := []byte{}
+	pubKeyList = neo3.SortPublicKeys(pubKeyList)
+	fmt.Println("after sort")
+	for _, pubKey := range pubKeyList {
+		keyBytes := crypto.CompressPubkey(pubKey)
+		fmt.Println(hex.EncodeToString(keyBytes))
 		bs = append(bs, keyBytes...)
 	}
 }

@@ -19,11 +19,10 @@ package method
 
 import (
 	"context"
+	"crypto/ecdsa"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"github.com/ethereum/go-ethereum/contracts/native/governance/node_manager"
-	"github.com/ethereum/go-ethereum/rlp"
 	"math/big"
 	"strconv"
 	"strings"
@@ -35,11 +34,14 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/contracts/native/go_abi/header_sync_abi"
 	"github.com/ethereum/go-ethereum/contracts/native/go_abi/side_chain_manager_abi"
+	"github.com/ethereum/go-ethereum/contracts/native/governance/node_manager"
 	"github.com/ethereum/go-ethereum/contracts/native/header_sync/bsc"
 	"github.com/ethereum/go-ethereum/contracts/native/header_sync/heco"
 	"github.com/ethereum/go-ethereum/contracts/native/header_sync/okex"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/crypto"
+
 	block3 "github.com/joeqian10/neo3-gogogo/block"
 	crypto3 "github.com/joeqian10/neo3-gogogo/crypto"
 	helper3 "github.com/joeqian10/neo3-gogogo/helper"
@@ -48,11 +50,14 @@ import (
 	sc3 "github.com/joeqian10/neo3-gogogo/sc"
 	tx3 "github.com/joeqian10/neo3-gogogo/tx"
 	wallet3 "github.com/joeqian10/neo3-gogogo/wallet"
+
+	ontology_go_sdk "github.com/ontio/ontology-go-sdk"
 	"github.com/polynetwork/poly/native/service/header_sync/cosmos"
 	"github.com/polynetwork/poly/native/service/header_sync/polygon"
 	"github.com/polynetwork/zion-setup/config"
 	"github.com/polynetwork/zion-setup/log"
 	"github.com/polynetwork/zion-setup/tools/eth"
+	"github.com/polynetwork/zion-setup/tools/neo3"
 	"github.com/polynetwork/zion-setup/tools/tendermint"
 	"github.com/polynetwork/zion-setup/tools/zion"
 	"github.com/tendermint/tendermint/rpc/client/http"
@@ -547,17 +552,6 @@ func SyncZionToETH(z *zion.ZionTools, e *eth.ETHTools) {
 }
 
 func SyncZionToNeo3(z *zion.ZionTools) {
-	// get zion genesis header
-	var h uint64 = 0
-	header, err := z.GetBlockHeader(h)
-	if err != nil {
-		panic(fmt.Errorf("SyncZionToNeo3, GetBlockHeader error: %s", err.Error()))
-	}
-	rawHeader, err := rlp.EncodeToBytes(types.HotstuffFilteredHeader(header, false))
-	if err != nil {
-		panic(fmt.Errorf("SyncZionToNeo3, rlp.EncodeToBytes error: %s", err.Error()))
-	}
-
 	// get zion genesis validators
 	node_manager.InitABI()
 	input := new(node_manager.MethodGetEpochByIDInput)
@@ -580,13 +574,22 @@ func SyncZionToNeo3(z *zion.ZionTools) {
 		panic(fmt.Errorf("SyncZionToNeo3, MethodEpochOutput error: %s", err.Error()))
 	}
 	epochInfo := output.Epoch
-	bs := []byte{}
-
 	peers := epochInfo.Peers.List
+	// sort public keys
+	pubKeyList := []*ecdsa.PublicKey{}
 	for _, peer := range peers {
-		keyBytes, _ := hex.DecodeString(peer.PubKey)
+		s := strings.TrimPrefix(peer.PubKey, "0x")
+		keyBytes, _ := hex.DecodeString(s)
+		pubKey, _ := crypto.DecompressPubkey(keyBytes)
+		pubKeyList = append(pubKeyList, pubKey)
+	}
+	bs := []byte{}
+	pubKeyList = neo3.SortPublicKeys(pubKeyList)
+	for _, pubKey := range pubKeyList {
+		keyBytes := crypto.CompressPubkey(pubKey)
 		bs = append(bs, keyBytes...)
 	}
+
 	// peer.PubKey example
 	//0x02c07fb7d48eac559a2483e249d27841c18c7ce5dbbbf2796a6963cc9cef27cabd
 	//0x02f5135ae0853af71f017a8ecb68e720b729ab92c7123c686e75b7487d4a57ae07
@@ -595,14 +598,17 @@ func SyncZionToNeo3(z *zion.ZionTools) {
 	//0x0244e509103445d5e8fd290608308d16d08c739655d6994254e413bc1a06783856
 	//0x023884de29148505a8d862992e5721767d4b47ff52ffab4c2d2527182d812a6d95
 	//0x03b838fa2387beb3a56aed86e447309f8844cb208387c63af64ad740729b5c0a27
+	// after sort
+	//023884de29148505a8d862992e5721767d4b47ff52ffab4c2d2527182d812a6d95
+	//0244e509103445d5e8fd290608308d16d08c739655d6994254e413bc1a06783856
+	//03b838fa2387beb3a56aed86e447309f8844cb208387c63af64ad740729b5c0a27
+	//02c07fb7d48eac559a2483e249d27841c18c7ce5dbbbf2796a6963cc9cef27cabd
+	//03d0ecfd09db6b1e4f59da7ebde8f6c3ea3ed09f06f5190477ae4ee528ec692fa8
+	//03ecac0ebe7224cfd04056c940605a4a9d4cb0367cf5819bf7e5502bf44f68bdd4
+	//02f5135ae0853af71f017a8ecb68e720b729ab92c7123c686e75b7487d4a57ae07
 
 	// create contract parameter
 	cp1 := sc3.ContractParameter{
-		Type:  sc3.ByteArray,
-		Value: rawHeader,
-	}
-
-	cp2 := sc3.ContractParameter{
 		Type:  sc3.ByteArray,
 		Value: bs,
 	}
@@ -613,7 +619,7 @@ func SyncZionToNeo3(z *zion.ZionTools) {
 		panic(fmt.Errorf("SyncZionToNeo3, neo3 ccmc conversion error: %s", err.Error()))
 	}
 
-	script, err := sc3.MakeScript(scriptHash, "initGenesisBlock", []interface{}{cp1, cp2})
+	script, err := sc3.MakeScript(scriptHash, "initGenesisBlock", []interface{}{cp1})
 	if err != nil {
 		panic(fmt.Errorf("SyncZionToNeo3, neo3 sc.MakeScript error: %s", err.Error()))
 	}
