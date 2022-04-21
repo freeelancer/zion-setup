@@ -56,6 +56,7 @@ import (
 	"github.com/polynetwork/poly/native/service/header_sync/polygon"
 	"github.com/polynetwork/zion-setup/config"
 	"github.com/polynetwork/zion-setup/log"
+	cosmos2 "github.com/polynetwork/zion-setup/tools/cosmos"
 	"github.com/polynetwork/zion-setup/tools/eth"
 	"github.com/polynetwork/zion-setup/tools/neo3"
 	"github.com/polynetwork/zion-setup/tools/tendermint"
@@ -146,9 +147,8 @@ func RegisterSideChain(method string, chainName string, z *zion.ZionTools, e *et
 		if len(eccd) != 4 {
 			panic(fmt.Errorf("incorrect Neo3CCMC length"))
 		}
-	case "zion":
-		blkToWait = 0
-		extra = []byte{}
+	case "zion", "switcheo":
+		blkToWait = 1
 
 	default:
 		panic(fmt.Errorf("not supported chain name"))
@@ -432,6 +432,28 @@ func SyncETHToZion(z *zion.ZionTools, e *eth.ETHTools, signerArr []*zion.ZionSig
 			panic(buf.Err)
 		}
 		raw = buf.Bytes()
+	case "switcheo":
+		invoker, err := cosmos2.NewCosmosInvoker()
+		if err != nil {
+			panic(err)
+		}
+		res, err := invoker.RpcCli.Commit(&config.DefConfig.CMConfig.CMEpoch)
+		if err != nil {
+			panic(err)
+		}
+		vals, err := cosmos2.GetValidators(invoker.RpcCli, config.DefConfig.CMConfig.CMEpoch)
+		if err != nil {
+			panic(err)
+		}
+		ch := &cosmos.CosmosHeader{
+			Header:  *res.Header,
+			Commit:  res.Commit,
+			Valsets: vals,
+		}
+		raw, err = invoker.CMCdc.MarshalBinaryBare(ch)
+		if err != nil {
+			panic(err)
+		}
 	default:
 		panic(fmt.Errorf("not supported chain name"))
 	}

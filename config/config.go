@@ -32,6 +32,7 @@ type Config struct {
 	ChainName      string
 	ETHConfig      *ETHConfig
 	Neo3Config     *Neo3Config
+	CMConfig       *CMConfig
 }
 
 type ETHConfig struct {
@@ -51,6 +52,15 @@ type ETHConfig struct {
 	PolygonHeader string
 	//used for bor
 	HeimdallChainId uint64
+}
+
+type CMConfig struct {
+	//used for switcheo chain
+	CMWalletPath string
+	CMWalletPwd  string
+	CMGas        uint64
+	CMGasPrice   string
+	CMEpoch      int64
 }
 
 type Neo3Config struct {
