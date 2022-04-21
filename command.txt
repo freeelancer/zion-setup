@@ -1,3 +1,3 @@
-./zion-setup -cmd=sync_genesis_header -conf=config_xdai.json
+./zion-setup -cmd=sync_genesis_header -conf=config.json
 
-./zion-setup -cmd=register_side_chain -conf=config_xdai.json
+./zion-setup -cmd=register_side_chain -conf=config.json
