@@ -695,7 +695,7 @@ func SyncZionToNeo3(z *zion.ZionTools) {
 		response2 := wh.Client.GetRawTransaction(trx.GetHash().String())
 		if response2.HasError() {
 			if strings.Contains(response2.GetErrorInfo(), "Unknown transaction") {
-				if count<2 {
+				if count < 2 {
 					continue
 				} else {
 					panic(fmt.Errorf("SyncZionToNeo3, neo3Tx: %s is not confirmed after 30s", trx.GetHash().String()))
@@ -705,7 +705,7 @@ func SyncZionToNeo3(z *zion.ZionTools) {
 			}
 		} else {
 			if response2.Result.Hash == "" {
-				if count<2 {
+				if count < 2 {
 					continue
 				} else {
 					panic(fmt.Errorf("SyncZionToNeo3, neo3Tx: %s is not confirmed after 30s", trx.GetHash().String()))
@@ -716,4 +716,31 @@ func SyncZionToNeo3(z *zion.ZionTools) {
 			}
 		}
 	}
+}
+
+func SyncZionToCM(z *zion.ZionTools) {
+	epochInfo, err := z.GetEpochInfo()
+	if err != nil {
+		panic(fmt.Errorf("SyncZionToCM, GetEpochInfo error: %s", err.Error()))
+	}
+	var h uint64
+	if epochInfo.StartHeight != 0 {
+		h = epochInfo.StartHeight - 1
+	}
+	rawHeader, _, err := z.GetRawHeaderAndRawSeals(h)
+	if err != nil {
+		panic(fmt.Errorf("SyncZionToCM, GetRawHeaderAndRawSeals error: %s", err.Error()))
+	}
+
+	invoker, err := cosmos2.NewCosmosInvoker()
+	if err != nil {
+		panic(err)
+	}
+
+	tx, err := invoker.SyncPolyGenesisHdr(invoker.Acc.Acc, rawHeader)
+	if err != nil {
+		panic(err)
+	}
+
+	log.Infof("successful to sync poly genesis header to cosmos: ( txhash: %s )", tx.Hash.String())
 }

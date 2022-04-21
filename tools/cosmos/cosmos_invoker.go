@@ -17,20 +17,25 @@
 package cosmos
 
 import (
+	"encoding/hex"
 	"fmt"
 	"io/ioutil"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/crypto/keys/mintkey"
 	"github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/auth/exported"
+	"github.com/polynetwork/cosmos-poly-module/headersync"
 	"github.com/polynetwork/zion-setup/config"
 	"github.com/polynetwork/zion-setup/log"
 	"github.com/tendermint/tendermint/crypto"
+	"github.com/tendermint/tendermint/libs/bytes"
 	"github.com/tendermint/tendermint/rpc/client/http"
+	coretypes "github.com/tendermint/tendermint/rpc/core/types"
 	types2 "github.com/tendermint/tendermint/types"
 )
 
@@ -140,6 +145,71 @@ func NewCosmosAcc(wallet, pwd string, cli *http.HTTP, cdc *codec.Codec) (*Cosmos
 	acc.AccNum = eAcc.GetAccountNumber()
 
 	return acc, nil
+}
+
+func (invoker *CosmosInvoker) sendCosmosTx(msgs []types.Msg) (*coretypes.ResultBroadcastTx, error) {
+	toSign := auth.StdSignMsg{
+		Sequence:      invoker.Acc.Seq.GetAndAdd(),
+		AccountNumber: invoker.Acc.AccNum,
+		ChainID:       "switcheochain",
+		Msgs:          msgs,
+		Fee:           auth.NewStdFee(invoker.CMGas, invoker.CMFees),
+	}
+	sig, err := invoker.Acc.PrivateKey.Sign(toSign.Bytes())
+	if err != nil {
+		return nil, fmt.Errorf("failed to sign raw tx: (error: %v, raw tx: %x)", err, toSign.Bytes())
+	}
+
+	tx := auth.NewStdTx(msgs, toSign.Fee, []auth.StdSignature{{invoker.Acc.PrivateKey.PubKey(),
+		sig}}, toSign.Memo)
+	encoder := auth.DefaultTxEncoder(invoker.CMCdc)
+	rawTx, err := encoder(tx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to encode signed tx: %v", err)
+	}
+
+	var res *coretypes.ResultBroadcastTx
+	for {
+		res, err = invoker.RpcCli.BroadcastTxSync(rawTx)
+		if err != nil {
+			return nil, fmt.Errorf("failed to broadcast tx: (error: %v, raw tx: %x)", err, rawTx)
+		}
+		if res.Code != 0 {
+			if strings.Contains(res.Log, "verify correct account sequence and chain-id") {
+				time.Sleep(time.Second)
+				continue
+			}
+			return nil, fmt.Errorf("failed to check tx: (code: %d, log: %s)", res.Code, res.Log)
+		} else {
+			break
+		}
+	}
+
+	return res, nil
+}
+
+func (invoker *CosmosInvoker) SyncPolyGenesisHdr(syner types.AccAddress, rawHdr []byte) (*coretypes.ResultBroadcastTx, error) {
+	param := &headersync.MsgSyncGenesisParam{
+		Syncer:        invoker.Acc.Acc,
+		GenesisHeader: hex.EncodeToString(rawHdr),
+	}
+	resTx, err := invoker.sendCosmosTx([]types.Msg{param})
+	if err != nil {
+		return nil, err
+	}
+
+	invoker.WaitTx(resTx.Hash)
+	return resTx, nil
+}
+
+func (invoker *CosmosInvoker) WaitTx(txhash bytes.HexBytes) {
+	tick := time.NewTicker(time.Second)
+	for range tick.C {
+		res, err := invoker.RpcCli.Tx(txhash, false)
+		if err == nil && res.Height > 0 {
+			break
+		}
+	}
 }
 
 type CosmosSeq struct {
