@@ -74,7 +74,7 @@ func NewCosmosInvoker() (*CosmosInvoker, error) {
 	conf.SetBech32PrefixForConsensusNode("swthvalcons", "swthvalconspub")
 	conf.Seal()
 
-	invoker.RpcCli, err = http.New(config.DefConfig.ETHConfig.ETHJsonRpcURL, "/websocket")
+	invoker.RpcCli, err = http.New(config.DefConfig.CMConfig.CMJsonRpcURL, "/websocket")
 	if err != nil {
 		return nil, err
 	}

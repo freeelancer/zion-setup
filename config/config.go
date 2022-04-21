@@ -56,6 +56,7 @@ type ETHConfig struct {
 
 type CMConfig struct {
 	//used for switcheo chain
+	CMJsonRpcURL string
 	CMWalletPath string
 	CMWalletPwd  string
 	CMGas        uint64
