@@ -22,7 +22,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	ontology_go_sdk "github.com/ontio/ontology-go-sdk"
 	"math/big"
 	"strconv"
 	"strings"
@@ -43,10 +42,12 @@ import (
 	helper3 "github.com/joeqian10/neo3-gogogo/helper"
 	io3 "github.com/joeqian10/neo3-gogogo/io"
 	rpc3 "github.com/joeqian10/neo3-gogogo/rpc"
+	ontology_go_sdk "github.com/ontio/ontology-go-sdk"
 	"github.com/polynetwork/poly/native/service/header_sync/cosmos"
 	"github.com/polynetwork/poly/native/service/header_sync/polygon"
 	"github.com/polynetwork/zion-setup/config"
 	"github.com/polynetwork/zion-setup/log"
+	cosmos2 "github.com/polynetwork/zion-setup/tools/cosmos"
 	"github.com/polynetwork/zion-setup/tools/eth"
 	"github.com/polynetwork/zion-setup/tools/tendermint"
 	"github.com/polynetwork/zion-setup/tools/zion"
@@ -421,6 +422,28 @@ func SyncETHToZion(z *zion.ZionTools, e *eth.ETHTools, signerArr []*zion.ZionSig
 			panic(buf.Err)
 		}
 		raw = buf.Bytes()
+	case "switcheo":
+		invoker, err := cosmos2.NewCosmosInvoker()
+		if err != nil {
+			panic(err)
+		}
+		res, err := invoker.RpcCli.Commit(&config.DefConfig.CMConfig.CMEpoch)
+		if err != nil {
+			panic(err)
+		}
+		vals, err := cosmos2.GetValidators(invoker.RpcCli, config.DefConfig.CMConfig.CMEpoch)
+		if err != nil {
+			panic(err)
+		}
+		ch := &cosmos.CosmosHeader{
+			Header:  *res.Header,
+			Commit:  res.Commit,
+			Valsets: vals,
+		}
+		raw, err = invoker.CMCdc.MarshalBinaryBare(ch)
+		if err != nil {
+			panic(err)
+		}
 	default:
 		panic(fmt.Errorf("not supported chain name"))
 	}
