@@ -64,6 +64,8 @@ import (
 	"github.com/tendermint/tendermint/rpc/client/http"
 )
 
+var zeroGasPrice = big.NewInt(0)
+
 func RegisterSideChain(method string, chainName string, z *zion.ZionTools, e *eth.ETHTools, signer *zion.ZionSigner) bool {
 	var blkToWait uint64
 	var extra, eccd []byte
@@ -171,7 +173,7 @@ func RegisterSideChain(method string, chainName string, z *zion.ZionTools, e *et
 	}
 
 	callMsg := ethereum.CallMsg{
-		From: signer.Address, To: &utils.SideChainManagerContractAddress, Gas: 0, GasPrice: gasPrice,
+		From: signer.Address, To: &utils.SideChainManagerContractAddress, Gas: 0, GasPrice: zeroGasPrice,
 		Value: big.NewInt(int64(0)), Data: txData,
 	}
 	gasLimit, err := z.GetEthClient().EstimateGas(context.Background(), callMsg)
@@ -179,7 +181,7 @@ func RegisterSideChain(method string, chainName string, z *zion.ZionTools, e *et
 		panic(fmt.Errorf("RegisterEthChain, estimate gas limit error: %s", err.Error()))
 	}
 	nonce := zion.NewNonceManager(z.GetEthClient()).GetAddressNonce(signer.Address)
-	tx := types.NewTx(&types.LegacyTx{Nonce: nonce, GasPrice: gasPrice, Gas: gasLimit, To: &utils.SideChainManagerContractAddress, Value: big.NewInt(0), Data: txData})
+	tx := types.NewTx(&types.LegacyTx{Nonce: nonce, GasPrice: zeroGasPrice, Gas: gasLimit, To: &utils.SideChainManagerContractAddress, Value: big.NewInt(0), Data: txData})
 	chainID, err := z.GetChainID()
 	if err != nil {
 		panic(fmt.Errorf("RegisterEthChain, get chain id error: %s", err.Error()))
@@ -227,7 +229,7 @@ func ApproveRegisterSideChain(method string, z *zion.ZionTools, signerArr []*zio
 		}
 
 		callMsg := ethereum.CallMsg{
-			From: signer.Address, To: &utils.SideChainManagerContractAddress, Gas: 0, GasPrice: gasPrice,
+			From: signer.Address, To: &utils.SideChainManagerContractAddress, Gas: 0, GasPrice: zeroGasPrice,
 			Value: big.NewInt(int64(0)), Data: txData,
 		}
 		gasLimit, err := z.GetEthClient().EstimateGas(context.Background(), callMsg)
@@ -235,7 +237,7 @@ func ApproveRegisterSideChain(method string, z *zion.ZionTools, signerArr []*zio
 			panic(fmt.Errorf("ApproveRegisterSideChain, estimate gas limit error: %s", err.Error()))
 		}
 		nonce := zion.NewNonceManager(z.GetEthClient()).GetAddressNonce(signer.Address)
-		tx := types.NewTx(&types.LegacyTx{Nonce: nonce, GasPrice: gasPrice, Gas: gasLimit, To: &utils.SideChainManagerContractAddress, Value: big.NewInt(0), Data: txData})
+		tx := types.NewTx(&types.LegacyTx{Nonce: nonce, GasPrice: zeroGasPrice, Gas: gasLimit, To: &utils.SideChainManagerContractAddress, Value: big.NewInt(0), Data: txData})
 		chainID, err := z.GetChainID()
 		if err != nil {
 			panic(fmt.Errorf("RegisterEthChain, get chain id error: %s", err.Error()))
@@ -474,7 +476,7 @@ func SyncETHToZion(z *zion.ZionTools, e *eth.ETHTools, signerArr []*zion.ZionSig
 
 	for _, signer := range signerArr {
 		callMsg := ethereum.CallMsg{
-			From: signer.Address, To: &utils.HeaderSyncContractAddress, Gas: 0, GasPrice: gasPrice,
+			From: signer.Address, To: &utils.HeaderSyncContractAddress, Gas: 0, GasPrice: zeroGasPrice,
 			Value: big.NewInt(int64(0)), Data: txData,
 		}
 		gasLimit, err := z.GetEthClient().EstimateGas(context.Background(), callMsg)
@@ -482,7 +484,7 @@ func SyncETHToZion(z *zion.ZionTools, e *eth.ETHTools, signerArr []*zion.ZionSig
 			panic(fmt.Errorf("SyncETHToZion, estimate gas limit error: %s", err.Error()))
 		}
 		nonce := zion.NewNonceManager(z.GetEthClient()).GetAddressNonce(signer.Address)
-		tx := types.NewTx(&types.LegacyTx{Nonce: nonce, GasPrice: gasPrice, Gas: gasLimit, To: &utils.HeaderSyncContractAddress, Value: big.NewInt(0), Data: txData})
+		tx := types.NewTx(&types.LegacyTx{Nonce: nonce, GasPrice: zeroGasPrice, Gas: gasLimit, To: &utils.HeaderSyncContractAddress, Value: big.NewInt(0), Data: txData})
 		chainID, err := z.GetChainID()
 		if err != nil {
 			panic(fmt.Errorf("SyncETHToZion, get chain id error: %s", err.Error()))
