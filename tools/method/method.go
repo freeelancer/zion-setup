@@ -261,14 +261,15 @@ func ApproveRegisterSideChain(method string, z *zion.ZionTools, signerArr []*zio
 }
 
 func SyncETHToZion(z *zion.ZionTools, e *eth.ETHTools, signerArr []*zion.ZionSigner, chainName string) {
-	curr, err := e.GetNodeHeight()
-	if err != nil {
-		panic(err)
-	}
-	log.Infof("current height of eth is %d", curr)
+
 	var raw []byte
 	switch chainName {
 	case "eth":
+		curr, err := e.GetNodeHeight()
+		if err != nil {
+			panic(err)
+		}
+		log.Infof("current height of eth is %d", curr)
 		hdr, err := e.Get1559BlockHeader(curr)
 		if err != nil {
 			panic(err)
@@ -278,6 +279,11 @@ func SyncETHToZion(z *zion.ZionTools, e *eth.ETHTools, signerArr []*zion.ZionSig
 			panic(err)
 		}
 	case "bsc":
+		curr, err := e.GetNodeHeight()
+		if err != nil {
+			panic(err)
+		}
+		log.Infof("current height of eth is %d", curr)
 		epochHeight := curr - curr%200
 		pEpochHeight := epochHeight - 200
 
@@ -307,6 +313,11 @@ func SyncETHToZion(z *zion.ZionTools, e *eth.ETHTools, signerArr []*zion.ZionSig
 			panic(err)
 		}
 	case "heco":
+		curr, err := e.GetNodeHeight()
+		if err != nil {
+			panic(err)
+		}
+		log.Infof("current height of eth is %d", curr)
 		epochHeight := curr - curr%200
 		pEpochHeight := epochHeight - 200
 
@@ -337,6 +348,11 @@ func SyncETHToZion(z *zion.ZionTools, e *eth.ETHTools, signerArr []*zion.ZionSig
 		}
 
 	case "pixie":
+		curr, err := e.GetNodeHeight()
+		if err != nil {
+			panic(err)
+		}
+		log.Infof("current height of eth is %d", curr)
 		var backOffHeight uint64 = 200 * 5
 
 		epochHeight := curr - curr%200 - backOffHeight
@@ -364,6 +380,11 @@ func SyncETHToZion(z *zion.ZionTools, e *eth.ETHTools, signerArr []*zion.ZionSig
 		}
 
 	case "zion":
+		curr, err := e.GetNodeHeight()
+		if err != nil {
+			panic(err)
+		}
+		log.Infof("current height of eth is %d", curr)
 		hdr, err := e.GetZionHeader(curr)
 		if err != nil {
 			panic(err)
@@ -374,6 +395,11 @@ func SyncETHToZion(z *zion.ZionTools, e *eth.ETHTools, signerArr []*zion.ZionSig
 		}
 
 	case "oec":
+		curr, err := e.GetNodeHeight()
+		if err != nil {
+			panic(err)
+		}
+		log.Infof("current height of eth is %d", curr)
 		oecCli, err := http.New(config.DefConfig.ETHConfig.OKTMRpcURL, "/websocket")
 		if err != nil {
 			panic(err)
@@ -398,6 +424,11 @@ func SyncETHToZion(z *zion.ZionTools, e *eth.ETHTools, signerArr []*zion.ZionSig
 			panic(err)
 		}
 	case "quorum":
+		curr, err := e.GetNodeHeight()
+		if err != nil {
+			panic(err)
+		}
+		log.Infof("current height of eth is %d", curr)
 		hdr, err := e.GetBlockHeader(curr)
 		if err != nil {
 			panic(err)
