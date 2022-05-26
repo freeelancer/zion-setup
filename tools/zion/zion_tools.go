@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/tls"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -133,7 +134,12 @@ func (self *ZionTools) GetRawHeaderAndRawSeals(height uint64) (rawHeader, rawSea
 	if err != nil {
 		return
 	}
-	rawHeader, err = rlp.EncodeToBytes(types.HotstuffFilteredHeader(header, false))
+	headerBs, _ := rlp.EncodeToBytes(header)
+	fmt.Println("FULL Header")
+	fmt.Println(hex.EncodeToString(headerBs))
+	rawHeader, _ = rlp.EncodeToBytes(types.HotstuffFilteredHeader(header, false))
+	fmt.Println("raw Header")
+	fmt.Println(hex.EncodeToString(rawHeader))
 	extra, err := types.ExtractHotstuffExtra(header)
 	if err != nil {
 		return
