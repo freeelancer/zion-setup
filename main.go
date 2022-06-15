@@ -114,7 +114,7 @@ func main() {
 			method.SyncZionToNeo3(z)
 		case "switcheo":
 			method.SyncETHToZion(z, e, signerArr[0:5], config.DefConfig.ChainName)
-			method.SyncZionToCM(z)
+			// method.SyncZionToCM(z)
 		}
 	default:
 		panic(fmt.Errorf("not supported method"))
