@@ -115,6 +115,8 @@ func main() {
 		case "switcheo":
 			method.SyncETHToZion(z, e, signerArr[0:5], config.DefConfig.ChainName)
 			// method.SyncZionToCM(z)
+		case "zilliqa":
+			method.SyncETHToZion(z, e, signerArr[0:5], config.DefConfig.ChainName)
 		}
 	default:
 		panic(fmt.Errorf("not supported method"))
