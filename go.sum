@@ -491,6 +491,7 @@ github.com/jmhodges/levigo v1.0.0 h1:q5EC36kV79HWeTBWsod3mG11EgStG3qArTKcvlksN1U
 github.com/jmhodges/levigo v1.0.0/go.mod h1:Q6Qx+uH3RAqyK4rFQroq9RL7mdkABMcfhEI+nNuzMJQ=
 github.com/joeqian10/neo-gogogo v0.0.0-20200611102831-c17de5e1f0f8/go.mod h1:1fVDp4U1ROZQBRIooecbGNHHJpfs3bG9528sqlZ096g=
 github.com/joeqian10/neo-gogogo v1.1.0/go.mod h1:1fVDp4U1ROZQBRIooecbGNHHJpfs3bG9528sqlZ096g=
+github.com/joeqian10/neo3-gogogo v0.3.8/go.mod h1:k0wb1hcBjjspDpyHtEXIpDUEXAw5SfX7coi5AkNtxoU=
 github.com/joeqian10/neo3-gogogo v1.1.0 h1:8qbpQgHCX9X0+euM2cEMO63uLJrnoZcyq6HLVZTYVks=
 github.com/joeqian10/neo3-gogogo v1.1.0/go.mod h1:k0wb1hcBjjspDpyHtEXIpDUEXAw5SfX7coi5AkNtxoU=
 github.com/joeqian10/neo3-gogogo-legacy v1.0.0/go.mod h1:PsVfMQ3kQVb4v3vCi0kbVLqB+KBU3DYF+AuIFH0M2UU=
@@ -689,15 +690,14 @@ github.com/pkg/profile v1.2.1/go.mod h1:hJw3o1OdXxsrSjjVksARp5W95eeEaEfptyVZyv6J
 github.com/pkg/term v0.0.0-20180730021639-bffc007b7fd5/go.mod h1:eCbImbZ95eXtAUIbLAuAVnBnwf83mjf6QIVH8SHYwqQ=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
-github.com/polynetwork/Zion v0.0.0-20220106062029-77efabb1d674 h1:SFT9SlZmWWb9mnLKOvKvMelcvKjT8XgodSMjAzNc6pw=
-github.com/polynetwork/Zion v0.0.0-20220106062029-77efabb1d674/go.mod h1:4GbFl4NA5pfSvDWOxqIJX1zeA/qlBrSxpj1Ucl0MRQ0=
+github.com/polynetwork/Zion v0.0.0-20220623025032-81f568159f1a h1:eBkitZMPjCVK8O+hj4djYSinbhWnzl05Jserv1Ot9xI=
+github.com/polynetwork/Zion v0.0.0-20220623025032-81f568159f1a/go.mod h1:TSubsKaLmMf8mgVfmDYiN+YpCYAIAPwllD4b5IA02qY=
 github.com/polynetwork/btc-vendor-tools v0.0.0-20200813091748-3b19a5fd7666/go.mod h1:U8rR9X6vemlkBAJWfvzwSoalcJjX8B2aQjB0kPRhBUA=
 github.com/polynetwork/cosmos-poly-module v0.0.0-20200810030259-95d586518759 h1:M0DV6MUVXOZtdQ94i8oYuSAX+ljzEe+mMqb2Llnm/oM=
 github.com/polynetwork/cosmos-poly-module v0.0.0-20200810030259-95d586518759/go.mod h1:VMBJZ8GSZeoWBntd/rWx2Rr5roRKofO7siP1qd6A6pY=
 github.com/polynetwork/eth-contracts v0.0.0-20200814062128-70f58e22b014/go.mod h1:TeePrYZfWJAwuksPlie7RPequ51Ujp5l/JY6TcutsFc=
 github.com/polynetwork/poly v0.0.0-20200710095239-0596a3d7afe5/go.mod h1:UzlGEWk0eCGsuMJOZfBoZjRbmu4Yw/SudKAIFe1gPnY=
 github.com/polynetwork/poly v0.0.0-20200715030435-4f1d1a0adb44/go.mod h1:UzlGEWk0eCGsuMJOZfBoZjRbmu4Yw/SudKAIFe1gPnY=
-github.com/polynetwork/poly v1.7.3-0.20210804073726-5d4f4d4a9371/go.mod h1:/+DAUZ7oWJZaZSigHrBWMwqESaTRqiFEVYft2hMwiT4=
 github.com/polynetwork/poly v1.8.3 h1:vuCgwWhO0SWE13GVxEYc4T90Fnhn/TTFYPGm1PPJiz8=
 github.com/polynetwork/poly v1.8.3/go.mod h1:GbygOT8Ejw69X141yFBDc93rpqYe19B82ETqqg7OsGU=
 github.com/polynetwork/poly-go-sdk v0.0.0-20200722030827-6875b6018b93/go.mod h1:a1wMo/VFoUAKX2yVjipvFug6Yu5BPhf/2tP5xywqfIc=
