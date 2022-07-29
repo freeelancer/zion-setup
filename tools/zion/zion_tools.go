@@ -135,6 +135,8 @@ func (self *ZionTools) GetRawHeaderAndRawSeals(height uint64) (rawHeader, rawSea
 		return
 	}
 	headerBs, _ := rlp.EncodeToBytes(header)
+	fmt.Println("Height")
+	fmt.Println(height)
 	fmt.Println("FULL Header")
 	fmt.Println(hex.EncodeToString(headerBs))
 	rawHeader, _ = rlp.EncodeToBytes(types.HotstuffFilteredHeader(header, false))
@@ -145,6 +147,8 @@ func (self *ZionTools) GetRawHeaderAndRawSeals(height uint64) (rawHeader, rawSea
 		return
 	}
 	rawSeals, err = rlp.EncodeToBytes(extra.CommittedSeal)
+	fmt.Println("raw Seals")
+	fmt.Println(hex.EncodeToString(rawSeals))
 	return
 }
 
