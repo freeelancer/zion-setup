@@ -42,16 +42,6 @@ type ETHConfig struct {
 	Eccm          string
 	ETHJsonRpcURL string
 	ETHPrivateKey string
-	//used for Ont chain
-	OntRpcURL string
-	//used for Ont chain
-	OntEpoch uint32
-	//used for okex chain
-	OKTMRpcURL string
-	//used for heimdall and bor
-	PolygonHeader string
-	//used for bor
-	HeimdallChainId uint64
 }
 
 type CMConfig struct {
@@ -61,7 +51,6 @@ type CMConfig struct {
 	CMWalletPwd  string
 	CMGas        uint64
 	CMGasPrice   string
-	CMEpoch      int64
 }
 
 type Neo3Config struct {
