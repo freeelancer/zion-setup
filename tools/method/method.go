@@ -39,55 +39,42 @@ import (
 	"time"
 )
 
-type ExtraInfo struct {
-	ChainID *big.Int // chainId of heco chain, testnet: 256, mainnet: 128
-	Period  uint64
-}
-
-type PolygonExtraInfo struct {
-	Sprint              uint64
-	Period              uint64
-	ProducerDelay       uint64
-	BackupMultiplier    uint64
-	HeimdallPolyChainID uint64
-}
-
 func RegisterSideChain(method string, chainName string, z *zion.ZionTools, signer *zion.ZionSigner) bool {
 	var eccd []byte
 	var err error
 	switch chainName {
 	case "quorum", "ont":
-		eccd, err = hex.DecodeString(strings.Replace(config.DefConfig.ETHConfig.Eccd, "0x", "", 1))
+		eccd, err = hex.DecodeString(strings.Replace(config.DefConfig.SideConfig.Eccd, "0x", "", 1))
 		if err != nil {
-			panic(fmt.Errorf("RegisterEthChain, failed to decode eccd '%s' : %v", config.DefConfig.ETHConfig.Eccd, err))
+			panic(fmt.Errorf("RegisterEthChain, failed to decode eccd '%s' : %v", config.DefConfig.SideConfig.Eccd, err))
 		}
 	case "eth", "oec", "arbitrum", "optimism", "fantom", "avalanche", "xdai":
-		eccd, err = hex.DecodeString(strings.Replace(config.DefConfig.ETHConfig.Eccd, "0x", "", 1))
+		eccd, err = hex.DecodeString(strings.Replace(config.DefConfig.SideConfig.Eccd, "0x", "", 1))
 		if err != nil {
-			panic(fmt.Errorf("RegisterEthChain, failed to decode eccd '%s' : %v", config.DefConfig.ETHConfig.Eccd, err))
+			panic(fmt.Errorf("RegisterEthChain, failed to decode eccd '%s' : %v", config.DefConfig.SideConfig.Eccd, err))
 		}
 	case "bsc":
-		eccd, err = hex.DecodeString(strings.Replace(config.DefConfig.ETHConfig.Eccd, "0x", "", 1))
+		eccd, err = hex.DecodeString(strings.Replace(config.DefConfig.SideConfig.Eccd, "0x", "", 1))
 		if err != nil {
-			panic(fmt.Errorf("RegisterEthChain, failed to decode eccd '%s' : %v", config.DefConfig.ETHConfig.Eccd, err))
+			panic(fmt.Errorf("RegisterEthChain, failed to decode eccd '%s' : %v", config.DefConfig.SideConfig.Eccd, err))
 		}
 	case "heco":
-		eccd, err = hex.DecodeString(strings.Replace(config.DefConfig.ETHConfig.Eccd, "0x", "", 1))
+		eccd, err = hex.DecodeString(strings.Replace(config.DefConfig.SideConfig.Eccd, "0x", "", 1))
 		if err != nil {
-			panic(fmt.Errorf("RegisterEthChain, failed to decode eccd '%s' : %v", config.DefConfig.ETHConfig.Eccd, err))
+			panic(fmt.Errorf("RegisterEthChain, failed to decode eccd '%s' : %v", config.DefConfig.SideConfig.Eccd, err))
 		}
 	case "polygon":
-		eccd, err = hex.DecodeString(strings.Replace(config.DefConfig.ETHConfig.Eccd, "0x", "", 1))
+		eccd, err = hex.DecodeString(strings.Replace(config.DefConfig.SideConfig.Eccd, "0x", "", 1))
 		if err != nil {
-			panic(fmt.Errorf("RegisterEthChain, failed to decode eccd '%s' : %v", config.DefConfig.ETHConfig.Eccd, err))
+			panic(fmt.Errorf("RegisterEthChain, failed to decode eccd '%s' : %v", config.DefConfig.SideConfig.Eccd, err))
 		}
 	case "pixie":
-		eccd, err = hex.DecodeString(strings.Replace(config.DefConfig.ETHConfig.Eccd, "0x", "", 1))
+		eccd, err = hex.DecodeString(strings.Replace(config.DefConfig.SideConfig.Eccd, "0x", "", 1))
 		if err != nil {
-			panic(fmt.Errorf("RegisterEthChain, failed to decode eccd '%s' : %v", config.DefConfig.ETHConfig.Eccd, err))
+			panic(fmt.Errorf("RegisterEthChain, failed to decode eccd '%s' : %v", config.DefConfig.SideConfig.Eccd, err))
 		}
 	case "neo3":
-		eccd = helper3.HexToBytes(config.DefConfig.ETHConfig.Eccd)
+		eccd = helper3.HexToBytes(config.DefConfig.SideConfig.Eccd)
 		if len(eccd) != 4 {
 			panic(fmt.Errorf("incorrect Neo3 eccd length"))
 		}
@@ -106,8 +93,8 @@ func RegisterSideChain(method string, chainName string, z *zion.ZionTools, signe
 	}
 	gasPrice = gasPrice.Mul(gasPrice, big.NewInt(1))
 
-	txData, err := scmAbi.Pack(method, signer.Address, config.DefConfig.ETHConfig.ChainId, config.DefConfig.ETHConfig.Router,
-		chainName, 0, eccd, []byte{})
+	txData, err := scmAbi.Pack(method, config.DefConfig.SideConfig.ChainId, config.DefConfig.SideConfig.Router,
+		chainName, eccd, []byte{})
 	if err != nil {
 		panic(fmt.Errorf("RegisterEthChain, scmAbi.Pack error:" + err.Error()))
 	}
@@ -163,7 +150,7 @@ func ApproveRegisterSideChain(method string, z *zion.ZionTools, signerArr []*zio
 	timerCtx, cancelFunc := context.WithTimeout(context.Background(), duration)
 	defer cancelFunc()
 	for _, signer := range signerArr {
-		txData, err := scmAbi.Pack(method, config.DefConfig.ETHConfig.ChainId, signer.Address)
+		txData, err := scmAbi.Pack(method, config.DefConfig.SideConfig.ChainId)
 		if err != nil {
 			panic(fmt.Errorf("ApproveRegisterSideChain, scmAbi.Pack error:" + err.Error()))
 		}
@@ -201,7 +188,7 @@ func ApproveRegisterSideChain(method string, z *zion.ZionTools, signerArr []*zio
 }
 
 func SyncZionToETH(z *zion.ZionTools, e *eth.ETHTools) {
-	signer, err := eth.NewEthSigner(config.DefConfig.ETHConfig.ETHPrivateKey)
+	signer, err := eth.NewEthSigner(config.DefConfig.SideConfig.PrivateKey)
 	if err != nil {
 		panic(err)
 	}
@@ -234,7 +221,7 @@ func SyncZionToETH(z *zion.ZionTools, e *eth.ETHTools) {
 		panic(fmt.Errorf("SyncZionToETH, get suggest gas price failed error: %s", err.Error()))
 	}
 	gasPrice = gasPrice.Mul(gasPrice, big.NewInt(1))
-	eccm := common.HexToAddress(config.DefConfig.ETHConfig.Eccm)
+	eccm := common.HexToAddress(config.DefConfig.SideConfig.Eccm)
 	callMsg := ethereum.CallMsg{
 		From: signer.Address, To: &eccm, Gas: 0, GasPrice: gasPrice,
 		Value: big.NewInt(0), Data: txData,

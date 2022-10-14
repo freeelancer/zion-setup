@@ -30,18 +30,18 @@ type Config struct {
 	ZionJsonRpcURL string
 	NodeKeyList    []string
 	ChainName      string
-	ETHConfig      *ETHConfig
+	SideConfig     *SideConfig
 	Neo3Config     *Neo3Config
 	CMConfig       *CMConfig
 }
 
-type ETHConfig struct {
-	ChainId       uint64
-	Router        uint64
-	Eccd          string
-	Eccm          string
-	ETHJsonRpcURL string
-	ETHPrivateKey string
+type SideConfig struct {
+	ChainId    uint64
+	Router     uint64
+	Eccd       string
+	Eccm       string
+	JsonRpcURL string
+	PrivateKey string
 }
 
 type CMConfig struct {

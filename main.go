@@ -48,7 +48,7 @@ func main() {
 		panic(err)
 	}
 	z := zion.NewZionTools(config.DefConfig.ZionJsonRpcURL)
-	e := eth.NewEthTools(config.DefConfig.ETHConfig.ETHJsonRpcURL)
+	e := eth.NewEthTools(config.DefConfig.SideConfig.JsonRpcURL)
 
 	switch cmd {
 	case "register_side_chain":
@@ -86,7 +86,7 @@ func main() {
 		case "eth", "heco", "bsc", "oec", "quorum", "polygon", "zilliqa", "arbitrum", "optimism", "fantom",
 			"avalanche", "pixie", "xdai", "zion", "ont", "neo3", "switcheo":
 			if method.RegisterSideChain("updateSideChain", config.DefConfig.ChainName, z, signerArr[0]) {
-				method.ApproveRegisterSideChain("approveUpdateSideChain", z, signerArr[1:6])
+				method.ApproveRegisterSideChain("approveUpdateSideChain", z, signerArr)
 			}
 		}
 	case "sync_genesis_header":
@@ -102,9 +102,7 @@ func main() {
 		}
 
 		switch config.DefConfig.ChainName {
-		case "eth", "heco", "bsc", "oec", "quorum", "ont", "pixie", "zion":
-			method.SyncZionToETH(z, e)
-		case "arbitrum", "optimism", "fantom", "avalanche", "xdai", "bor":
+		case "eth", "heco", "bsc", "oec", "quorum", "ont", "pixie", "arbitrum", "optimism", "fantom", "avalanche", "xdai", "polygon", "zion":
 			method.SyncZionToETH(z, e)
 		//case "neo3":
 		//	method.SyncZionToNeo3(z)

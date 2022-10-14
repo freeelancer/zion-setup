@@ -123,7 +123,7 @@ require (
 )
 
 replace (
-	github.com/ethereum/go-ethereum v1.10.11 => github.com/polynetwork/Zion v0.0.0-20221010092127-e5f6006b2d06
+	github.com/ethereum/go-ethereum v1.10.11 => /Users/zhangmenghang/Documents/gopath/src/github.com/polynetwork/Zion
 	github.com/tendermint/tendermint v0.33.7 => github.com/siovanus/tendermint v0.33.8-0.20220323005314-e27de1e4128d
 	github.com/tendermint/tm-db/064 => github.com/tendermint/tm-db v0.6.4
 )
