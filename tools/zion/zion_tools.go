@@ -35,7 +35,6 @@ import (
 	"github.com/ethereum/go-ethereum/contracts/native/governance/node_manager"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/polynetwork/zion-setup/log"
@@ -139,7 +138,7 @@ func (self *ZionTools) GetRawHeaderAndRawSeals(height uint64) (rawHeader, rawSea
 	fmt.Println(height)
 	fmt.Println("FULL Header")
 	fmt.Println(hex.EncodeToString(headerBs))
-	rawHeader, _ = rlp.EncodeToBytes(types.HotstuffFilteredHeader(header, false))
+	rawHeader, err = rlp.EncodeToBytes(types.HotstuffFilteredHeader(header))
 	fmt.Println("raw Header")
 	fmt.Println(hex.EncodeToString(rawHeader))
 	extra, err := types.ExtractHotstuffExtra(header)
@@ -154,7 +153,7 @@ func (self *ZionTools) GetRawHeaderAndRawSeals(height uint64) (rawHeader, rawSea
 
 func (self *ZionTools) GetEpochInfo() (epochInfo *node_manager.EpochInfo, err error) {
 	node_manager.InitABI()
-	payload, err := new(node_manager.MethodEpochInput).Encode()
+	payload, err := new(node_manager.GetCurrentEpochInfoParam).Encode()
 	if err != nil {
 		return
 	}
@@ -167,11 +166,11 @@ func (self *ZionTools) GetEpochInfo() (epochInfo *node_manager.EpochInfo, err er
 	if err != nil {
 		return
 	}
-	output := new(node_manager.MethodEpochOutput)
+	output := new(node_manager.EpochInfo)
 	if err = output.Decode(res); err != nil {
 		return
 	}
-	epochInfo = output.Epoch
+	epochInfo = output
 	return
 }
 
@@ -238,62 +237,6 @@ func (self *ZionTools) GetChainID() (*big.Int, error) {
 	return self.ethclient.ChainID(context.Background())
 }
 
-func (self *ZionTools) GetRawProof(address, key string, height uint64) (accountProof, storageProof []byte, err error) {
-	height_hex := "0x" + strconv.FormatUint(height, 16)
-	raw, err := self.GetProof(
-		address,
-		key,
-		height_hex)
-	if err != nil {
-		return
-	}
-	res := &ETHProof{}
-	err = json.Unmarshal(raw, res)
-	if err != nil {
-		return
-	}
-	accountProof, err = rlpEncodeStringList(res.AccountProof)
-	if err != nil {
-		return
-	}
-	storageProof, err = rlpEncodeStringList(res.StorageProofs[0].Proof)
-	if err != nil {
-		return
-	}
-	return
-}
-
-func (self *ZionTools) GetProof(contractAddress string, key string, blockheight string) ([]byte, error) {
-	req := &proofReq{
-		JsonRPC: "2.0",
-		Method:  "eth_getProof",
-		Params:  []interface{}{contractAddress, []string{key}, blockheight},
-		Id:      1,
-	}
-	reqdata, err := json.Marshal(req)
-	if err != nil {
-		return nil, fmt.Errorf("get_ethproof: marshal req err: %s", err)
-	}
-	rspdata, err := self.restclient.SendRestRequest(reqdata)
-	if err != nil {
-		return nil, fmt.Errorf("GetProof: send request err: %s", err)
-	}
-	rsp := &proofRsp{}
-	err = json.Unmarshal(rspdata, rsp)
-	if err != nil {
-		return nil, fmt.Errorf("GetProof, unmarshal resp err: %s", err)
-	}
-	if rsp.Error != nil {
-		return nil, fmt.Errorf("GetProof, unmarshal resp err: %s", rsp.Error.Message)
-	}
-	result, err := json.Marshal(rsp.Result)
-	if err != nil {
-		return nil, fmt.Errorf("GetProof, Marshal result err: %s", err)
-	}
-	//fmt.Printf("proof res is:%s\n", string(result))
-	return result, nil
-}
-
 func (self *ZionTools) WaitTransactionConfirm(hash common.Hash) bool {
 	start := time.Now()
 	for {
@@ -316,37 +259,6 @@ func (self *ZionTools) WaitTransactionConfirm(hash common.Hash) bool {
 			return receipt.Status == types.ReceiptStatusSuccessful
 		}
 	}
-}
-
-func GetEpochKey(epochID uint64) common.Hash {
-	key := epochProofKey(EpochProofHash(epochID))
-	return crypto.Keccak256Hash(key[common.AddressLength:])
-}
-
-var SKP_PROOF = "st_proof"
-var EpochProofDigest = common.HexToHash("e4bf3526f07c80af3a5de1411dd34471c71bdd5d04eedbfa1040da2c96802041")
-
-func epochProofKey(proofHashKey common.Hash) []byte {
-	return utils.ConcatKey(utils.NodeManagerContractAddress, []byte(SKP_PROOF), proofHashKey.Bytes())
-}
-
-func EpochProofHash(epochID uint64) common.Hash {
-	enc := EpochProofDigest.Bytes()
-	enc = append(enc, utils.GetUint64Bytes(epochID)...)
-	return crypto.Keccak256Hash(enc)
-}
-
-func GetRawEpochInfo(id, startHeight uint64, peers *node_manager.Peers) (rawEpochInfo []byte, err error) {
-	var inf = struct {
-		ID          uint64
-		Peers       *node_manager.Peers
-		StartHeight uint64
-	}{
-		ID:          id,
-		Peers:       peers,
-		StartHeight: startHeight,
-	}
-	return rlp.EncodeToBytes(inf)
 }
 
 func rlpEncodeStringList(raw []string) ([]byte, error) {

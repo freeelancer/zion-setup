@@ -19,11 +19,11 @@ package main
 import (
 	"flag"
 	"fmt"
+	"github.com/polynetwork/zion-setup/tools/eth"
 	"os"
 
 	"github.com/polynetwork/zion-setup/config"
 	"github.com/polynetwork/zion-setup/log"
-	"github.com/polynetwork/zion-setup/tools/eth"
 	"github.com/polynetwork/zion-setup/tools/method"
 	"github.com/polynetwork/zion-setup/tools/zion"
 )
@@ -48,7 +48,7 @@ func main() {
 		panic(err)
 	}
 	z := zion.NewZionTools(config.DefConfig.ZionJsonRpcURL)
-	e := eth.NewEthTools(config.DefConfig.ETHConfig.ETHJsonRpcURL)
+	e := eth.NewEthTools(config.DefConfig.SideConfig.JsonRpcURL)
 
 	switch cmd {
 	case "register_side_chain":
@@ -64,10 +64,10 @@ func main() {
 		}
 
 		switch config.DefConfig.ChainName {
-		case "eth", "bsc", "heco", "oec", "quorum", "heimdall", "bor", "zilliqa", "arbitrum", "optimism", "fantom",
+		case "eth", "bsc", "heco", "oec", "quorum", "polygon", "zilliqa", "arbitrum", "optimism", "fantom",
 			"avalanche", "pixie", "xdai", "zion", "ont", "neo3", "switcheo":
-			if method.RegisterSideChain("registerSideChain", config.DefConfig.ChainName, z, e, signerArr[0]) {
-				method.ApproveRegisterSideChain("approveRegisterSideChain", z, signerArr[1:4])
+			if method.RegisterSideChain("registerSideChain", config.DefConfig.ChainName, z, signerArr[0]) {
+				method.ApproveRegisterSideChain("approveRegisterSideChain", z, signerArr)
 			}
 		}
 	case "update_side_chain":
@@ -83,10 +83,10 @@ func main() {
 		}
 
 		switch config.DefConfig.ChainName {
-		case "eth", "heco", "bsc", "oec", "quorum", "heimdall", "bor", "zilliqa", "arbitrum", "optimism", "fantom",
+		case "eth", "heco", "bsc", "oec", "quorum", "polygon", "zilliqa", "arbitrum", "optimism", "fantom",
 			"avalanche", "pixie", "xdai", "zion", "ont", "neo3", "switcheo":
-			if method.RegisterSideChain("updateSideChain", config.DefConfig.ChainName, z, e, signerArr[0]) {
-				method.ApproveRegisterSideChain("approveUpdateSideChain", z, signerArr[1:3])
+			if method.RegisterSideChain("updateSideChain", config.DefConfig.ChainName, z, signerArr[0]) {
+				method.ApproveRegisterSideChain("approveUpdateSideChain", z, signerArr)
 			}
 		}
 	case "sync_genesis_header":
@@ -102,21 +102,12 @@ func main() {
 		}
 
 		switch config.DefConfig.ChainName {
-		case "eth", "heco", "bsc", "oec", "quorum", "ont", "pixie", "zion":
-			method.SyncETHToZion(z, e, signerArr[0:5], config.DefConfig.ChainName)
+		case "eth", "heco", "bsc", "oec", "quorum", "ont", "pixie", "arbitrum", "optimism", "fantom", "avalanche", "xdai", "polygon", "zion":
 			method.SyncZionToETH(z, e)
-		case "heimdall":
-			method.SyncETHToZion(z, e, signerArr[0:5], config.DefConfig.ChainName)
-		case "arbitrum", "optimism", "fantom", "avalanche", "xdai", "bor":
-			method.SyncZionToETH(z, e)
-		case "neo3":
-			method.SyncETHToZion(z, e, signerArr[0:5], config.DefConfig.ChainName)
-			method.SyncZionToNeo3(z)
+		//case "neo3":
+		//	method.SyncZionToNeo3(z)
 		case "switcheo":
-			method.SyncETHToZion(z, e, signerArr[0:4], config.DefConfig.ChainName)
-			// method.SyncZionToCM(z)
-		case "zilliqa":
-			method.SyncETHToZion(z, e, signerArr[0:4], config.DefConfig.ChainName)
+			method.SyncZionToCM(z)
 		}
 	default:
 		panic(fmt.Errorf("not supported method"))
